@@ -1,4 +1,16 @@
-import { Home, User } from 'lucide-react';
+import {
+  FileText,
+  FolderOpen,
+  Home,
+  LayoutDashboard,
+  Layers,
+  LifeBuoy,
+  Receipt,
+  ShieldCheck,
+  Store,
+  User,
+  Users,
+} from 'lucide-react';
 import { z } from 'zod';
 
 import { NavigationConfigSchema } from '@kit/ui/navigation-schema';
@@ -16,6 +28,57 @@ const routes = [
         path: pathsConfig.app.home,
         Icon: <Home className={iconClasses} />,
         end: true,
+      },
+    ],
+  },
+  {
+    label: 'common:routes.clearinghouse',
+    children: [
+      {
+        label: 'common:routes.dashboard',
+        path: pathsConfig.app.dashboard,
+        Icon: <LayoutDashboard className={iconClasses} />,
+        end: true,
+      },
+      {
+        label: 'common:routes.claims',
+        path: pathsConfig.app.claims,
+        Icon: <FileText className={iconClasses} />,
+      },
+      {
+        label: 'common:routes.claimBatches',
+        path: pathsConfig.app.claimBatches,
+        Icon: <Layers className={iconClasses} />,
+      },
+      {
+        label: 'common:routes.remittances',
+        path: pathsConfig.app.remittances,
+        Icon: <Receipt className={iconClasses} />,
+      },
+      {
+        label: 'common:routes.payers',
+        path: pathsConfig.app.payers,
+        Icon: <Store className={iconClasses} />,
+      },
+      {
+        label: 'common:routes.documents',
+        path: pathsConfig.app.documents,
+        Icon: <FolderOpen className={iconClasses} />,
+      },
+      {
+        label: 'common:routes.support',
+        path: pathsConfig.app.support,
+        Icon: <LifeBuoy className={iconClasses} />,
+      },
+      {
+        label: 'common:routes.users',
+        path: pathsConfig.app.users,
+        Icon: <Users className={iconClasses} />,
+      },
+      {
+        label: 'common:routes.audit',
+        path: pathsConfig.app.audit,
+        Icon: <ShieldCheck className={iconClasses} />,
       },
     ],
   },

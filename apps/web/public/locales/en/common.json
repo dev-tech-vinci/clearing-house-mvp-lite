@@ -63,8 +63,21 @@
     "dashboard": "Dashboard",
     "settings": "Settings",
     "profile": "Profile",
-    "application": "Application"
+    "application": "Application",
+    "clearinghouse": "Clearinghouse",
+    "claims": "Claims",
+    "claimBatches": "Claim Batches",
+    "remittances": "Remittances",
+    "payers": "Payers",
+    "documents": "Documents",
+    "support": "Support",
+    "users": "Users",
+    "audit": "Audit Log"
   },
+  "supportPortalTitle": "Support Portal",
+  "adminPortalTitle": "Platform Admin",
+  "placeholderNoticeTitle": "Not yet implemented",
+  "placeholderNoticeDescription": "This screen is a route skeleton for the behavioral-health clearinghouse simulator. It will be implemented in a later build phase. All data in this application is synthetic simulation data — never real PHI.",
   "roles": {
     "owner": {
       "label": "Owner"

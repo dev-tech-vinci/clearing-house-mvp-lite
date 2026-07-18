@@ -123,34 +123,48 @@ function getPatterns() {
     },
     {
       pattern: new URLPattern({ pathname: '/home/*?' }),
-      handler: async (req: NextRequest, res: NextResponse) => {
-        const { data } = await getUser(req, res);
-
-        const origin = req.nextUrl.origin;
-        const next = req.nextUrl.pathname;
-
-        // If user is not logged in, redirect to sign in page.
-        if (!data?.claims) {
-          const signIn = pathsConfig.auth.signIn;
-          const redirectPath = `${signIn}?next=${next}`;
-
-          return NextResponse.redirect(new URL(redirectPath, origin).href);
-        }
-
-        const supabase = createMiddlewareClient(req, res);
-
-        const requiresMultiFactorAuthentication =
-          await checkRequiresMultiFactorAuthentication(supabase);
-
-        // If user requires multi-factor authentication, redirect to MFA page.
-        if (requiresMultiFactorAuthentication) {
-          return NextResponse.redirect(
-            new URL(pathsConfig.auth.verifyMfa, origin).href,
-          );
-        }
-      },
+      handler: requireAuthHandler,
+    },
+    {
+      // support staff portal - guarded the same way as /home until Phase 2
+      // introduces organization membership + role checks.
+      pattern: new URLPattern({ pathname: '/support/*?' }),
+      handler: requireAuthHandler,
+    },
+    {
+      // platform admin portal - guarded the same way as /home until Phase 2
+      // introduces organization membership + role checks.
+      pattern: new URLPattern({ pathname: '/admin/*?' }),
+      handler: requireAuthHandler,
     },
   ];
+}
+
+async function requireAuthHandler(req: NextRequest, res: NextResponse) {
+  const { data } = await getUser(req, res);
+
+  const origin = req.nextUrl.origin;
+  const next = req.nextUrl.pathname;
+
+  // If user is not logged in, redirect to sign in page.
+  if (!data?.claims) {
+    const signIn = pathsConfig.auth.signIn;
+    const redirectPath = `${signIn}?next=${next}`;
+
+    return NextResponse.redirect(new URL(redirectPath, origin).href);
+  }
+
+  const supabase = createMiddlewareClient(req, res);
+
+  const requiresMultiFactorAuthentication =
+    await checkRequiresMultiFactorAuthentication(supabase);
+
+  // If user requires multi-factor authentication, redirect to MFA page.
+  if (requiresMultiFactorAuthentication) {
+    return NextResponse.redirect(
+      new URL(pathsConfig.auth.verifyMfa, origin).href,
+    );
+  }
 }
 
 /**
