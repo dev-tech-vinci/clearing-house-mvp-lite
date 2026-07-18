@@ -1,0 +1,41 @@
+%% End-to-end claim lifecycle - simulated. Acknowledgment != payment.
+sequenceDiagram
+    autonumber
+    actor U as Claims Specialist
+    participant API as Next.js /api/v1 + Server Actions
+    participant CL as Claim svc
+    participant RE as Rule engine
+    participant EDI as EDI svc
+    participant PR as Local processor (state machine)
+    participant TR as Trace/Event svc
+    participant RM as Remittance svc
+    participant DB as Postgres (RLS)
+
+    U->>API: Create 837P/837I draft
+    API->>CL: validate tenant + persist (organization_id)
+    CL->>DB: INSERT claim (status=Draft)
+    U->>API: Validate claim
+    API->>RE: universal + claim-type + payer edits
+    RE-->>API: pass (all 10) / fail -> Validation Failed
+    U->>API: Approve + Submit
+    API->>EDI: generate scoped X12, preserve raw payload
+    EDI->>DB: INSERT edi_transactions + edi_payloads (ISA/GS/ST ctrl #s, hashes)
+    API->>PR: enqueue processing_job (idempotency_key)
+    PR->>TR: TA1 Accepted (envelope received)
+    PR->>TR: 999 Accepted (syntax OK)
+    PR->>TR: 277CA Accepted for adjudication
+    Note over PR,TR: Rejection would stop the claim HERE (pre-adjudication)
+    PR->>RE: adjudication rules (payer_test_profile)
+    alt 8 of 10 - covered
+        RE-->>PR: PAID
+        PR->>RM: generate synthetic 835 + adjustments
+        RM->>DB: remittances, remit_service_lines, claim_adjustments
+        PR->>TR: 835 Received -> EFT Matched -> Posted
+    else 2 of 10 - denied AFTER adjudication
+        RE-->>PR: DENIED (auth missing / benefit exhausted)
+        PR->>TR: Denied (CARC/RARC or SIM code + rule_id + next action)
+        Note over PR: No EFT deposit is matched for denials
+    end
+    U->>API: Open Transaction Trace
+    API->>TR: full event graph (correlation_id)
+    TR-->>U: every checkpoint, rejection vs denial kept separate
