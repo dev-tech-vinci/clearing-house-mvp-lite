@@ -9,15 +9,19 @@ import type { ClaimRuleVersionContext, ValidateClaimInput } from '../lib/validat
 import { evaluateClaimRules } from '../lib/validate-claim';
 
 /**
- * The actual validation core, shared by validateClaimAction (Server
- * Action, UI path) and POST /api/v1/claims/{id}/validate (REST path) so
- * the two surfaces can never drift apart on what "valid" means -- see
- * docs/progress/DECISIONS.md for why duplicating this logic once already
- * caused a real bug in Phase 4.
+ * Fetches the claim's current data and resolves which universal /
+ * claim_type / payer_edit rules apply to it (adjudication-category rules
+ * are post-adjudication and intentionally never evaluated here -- see
+ * docs/05-claim-lifecycle.md). Shared by runClaimValidation (Phase 5's
+ * interactive Validate button) and Phase 6's submit pipeline
+ * (apps/worker), which both need the same claim-to-rules resolution but
+ * do different things with the result (persist failures only, vs. persist
+ * every rule's pass/fail as a rule_evaluations audit trail) -- see
+ * docs/progress/DECISIONS.md for why this is factored out rather than
+ * duplicated (Phase 4's CSV-import bug was exactly this kind of drift).
  */
-export async function runClaimValidation(
+export async function loadClaimValidationContext(
   client: SupabaseClient<Database>,
-  userId: string,
   claimId: string,
 ) {
   const { data: claim, error: claimError } = await client
@@ -122,6 +126,23 @@ export async function runClaimValidation(
     lines: (claim.lines ?? []).map((line) => ({ serviceDate: line.service_date })),
     hasActivePayerEnrollment,
   };
+
+  return { claim, input, applicableRules, payerSimId };
+}
+
+/**
+ * The actual validation core, shared by validateClaimAction (Server
+ * Action, UI path) and POST /api/v1/claims/{id}/validate (REST path) so
+ * the two surfaces can never drift apart on what "valid" means -- see
+ * docs/progress/DECISIONS.md for why duplicating this logic once already
+ * caused a real bug in Phase 4.
+ */
+export async function runClaimValidation(
+  client: SupabaseClient<Database>,
+  userId: string,
+  claimId: string,
+) {
+  const { input, applicableRules } = await loadClaimValidationContext(client, claimId);
 
   const errors = evaluateClaimRules(input, applicableRules);
   const status = errors.length === 0 ? 'validated' : 'validation_failed';

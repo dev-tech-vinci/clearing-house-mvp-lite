@@ -1,14 +1,14 @@
-# Claim Lifecycle (Phase 5)
+# Claim Lifecycle (Phase 5–6)
 
-> Simulation only. All claim data is synthetic (`SIM-` prefixed patients/providers/facilities/claim IDs), diagnosis and procedure codes are drawn from a small, clearly-labeled, non-exhaustive reference list — not a licensed ICD-10-CM/CPT/HCPCS code set. No claim of production X12 conformance is made or implied. Actual 837 EDI file generation is Phase 6 scope; this phase builds the data model, the draft→validate→approve workflow, and the deliberate 837P/837I subset.
+> Simulation only. All claim data is synthetic (`SIM-` prefixed patients/providers/facilities/claim IDs), diagnosis and procedure codes are drawn from a small, clearly-labeled, non-exhaustive reference list — not a licensed ICD-10-CM/CPT/HCPCS code set. Generated X12/ack payloads are scoped and clearly labeled simulated, not production-conformant. Actual adjudication/835/denials are Phase 7 scope.
 
-## Scope: draft → validate → approve
+## Scope: draft → validate → approve → submit → accepted for adjudication
 
-Phase 5's lifecycle is intentionally a subset of the architecture's full state machine (`Draft → Validating → Validation Failed → Validated → EDI Generated → Submitted → TA1 → 999 → 277CA → Accepted for Adjudication → Adjudicating → Paid/Partially Paid/Denied → 835 Received → EFT Matched → Posted → Corrected/Resubmitted → Closed`). `claims.status` supports only:
+`claims.status`:
 
-`draft → validation_failed | validated → approved`
+`draft → validation_failed | validated → approved → submitted → accepted_for_adjudication`
 
-The remaining states are added by whichever later phase actually drives them (Phase 6 for EDI generation/submission/acknowledgments, Phase 7 for adjudication/remittance) — same deferral pattern as Phase 3's `payer_id`. This is not an oversight; building the full 18-state enum now, with nothing yet able to transition a claim past `approved`, would be exactly the kind of speculative design `CLAUDE.md` asks to avoid.
+This is intentionally a coarse subset of the architecture's full state machine (`Draft → Validating → Validation Failed → Validated → EDI Generated → Submitted → TA1 → 999 → 277CA → Accepted for Adjudication → Adjudicating → Paid/Partially Paid/Denied → 835 Received → EFT Matched → Posted → Corrected/Resubmitted → Closed`). Notably, **TA1/999/277CA are not separate `claims.status` values** — they're `transaction_events`/`acknowledgments` rows (see below), which is what those tables exist for; adding six more claims.status values that a UI would need to special-case, when the trace already captures the same information at finer grain, would be exactly the kind of speculative design `CLAUDE.md` asks to avoid. The remaining lifecycle states (adjudication onward) are added when Phase 7 actually drives them — same deferral pattern as Phase 3's `payer_id`.
 
 ## The 837P / 837I subset (deliberate)
 
@@ -62,9 +62,37 @@ Three of the six evaluated rules (`SIM-RULE-UNIV-003` subscriber present, `SIM-R
 
 `packages/features/claims/src/lib/synthetic-codes.ts` — small, illustrative, non-exhaustive lists of BH-relevant ICD-10-CM diagnosis codes, CPT/HCPCS service codes, UB-04 revenue codes, type-of-bill codes, and place-of-service codes. Descriptions are original, short, plain-English summaries — not copied from any licensed code manual. Not a substitute for a real terminology service; do not extend this into anything resembling a full code set.
 
+## EDI generation, acknowledgments, and the trace (Phase 6)
+
+Introduced by `apps/web/supabase/migrations/20260719040000_edi.sql`. Submitting an approved claim runs `apps/worker`'s `DeterministicClaimProcessor` synchronously — see `docs/02-architecture.md` for the full pipeline diagram and the idempotency/rejection design. Summary:
+
+1. Re-runs the Phase 5 rule engine (universal + claim-type + payer-edit rules) and persists every result — pass or fail — to `rule_evaluations`, not just failures (`claims.last_validation_result` only ever stores failures from the interactive Validate button).
+2. If anything fails: one `transaction_events` row (`submission_rejected`, category `validation`), `claims.status → validation_failed`, and nothing else happens — no EDI is generated. This is a genuine rejection (pre-adjudication), computed from real rule results, not a hardcoded always-succeed path.
+3. If everything passes: generates synthetic control numbers (`ISA13`/`GS06`/`ST02`) and a synthetic 837P/837I payload (`edi_transactions` + `edi_payloads`, hashed), then walks TA1 → 999 → 277CA — each step writes an `edi_payloads` (inbound) row, an `acknowledgments` row, and one `transaction_events` row — always accepted on this simulator's happy path, ending at `accepted_for_adjudication`.
+
+### Tables
+
+| Table | Purpose |
+|---|---|
+| `processing_jobs` | One row per claim submission, ever (`claim_id` `UNIQUE`) — this constraint *is* the idempotency guarantee. |
+| `edi_transactions` | The outbound 837 transaction for a claim (`claim_id` `UNIQUE` — one submission per claim this phase), with its control numbers. |
+| `edi_payloads` | Raw synthetic payload text + sha256 hash, both the outbound 837 and every inbound ack. |
+| `acknowledgments` | Simulated TA1/999/277CA results. |
+| `rule_evaluations` | Every applicable rule's pass/fail outcome at submit time — the full audit trail behind an accept/reject decision. |
+| `replay_attempts` | One row per submit attempt, first or duplicate — the queryable proof idempotency held. |
+| `transaction_events` | **Append-only.** Every checkpoint, every field the architecture doc names (event name/category, timestamp, actor, claim/batch IDs, ISA13/GS06/ST02, payer, route, request/response hash, status, code, explanation, rule ID, correlation ID, previous event, next recommended action). `INSERT` policy only — no `UPDATE`/`DELETE` grant to `authenticated` at all, proven by `apps/web/supabase/tests/database/edi-rls.test.sql`. |
+
+### Idempotency
+
+A duplicate submit of the same claim is detected by the `processing_jobs.claim_id` unique constraint on the processor's very first write — if it fails with a uniqueness violation, the attempt is logged to `replay_attempts` (`outcome = 'duplicate_ignored'`) and nothing else is written: no new `edi_transactions`, no new `transaction_events`. Proven via a real duplicate `POST /api/v1/claims/{id}/submit` in `apps/e2e/tests/edi/edi.spec.ts`, asserting the trace event count is unchanged after the second call.
+
+### The Transaction Trace UI
+
+`packages/features/transaction-trace` renders every `transaction_events` field for a claim, in order, on the claim detail page. Deliberately a separate package from `packages/features/edi` — later phases (remittance, Phase 7) will also write to the same `transaction_events` spine, not just the EDI pipeline.
+
 ## Not yet built (deferred, documented)
 
-- Actual 837 EDI file generation, batching, and submission — Phase 6.
-- `claim_documents`/`claim_relationships`/`claim_batches` UI — schema and RLS exist now; upload, correction/resubmission, and batch-management screens are later phases.
-- Adjudication-category rule evaluation, remittance, denial handling — Phase 7.
+- `claim_documents`/`claim_relationships`/`claim_batches` UI — schema and RLS exist since Phase 5; upload, correction/resubmission, and batch-management screens are later phases.
+- Adjudication, 835, denials, remittance — Phase 7. No adjudication-stage `transaction_events` row is ever written by Phase 6 — the rejection-vs-denial line is enforced by simply never crossing it here.
 - Editing claim header fields (patient/subscriber/coverage/provider/facility) after creation — only `notes` is editable via `PATCH /api/v1/claims/{id}`; changing the clinical/financial header is treated as a correction, which belongs to the (not-yet-built) `claim_relationships`-based workflow, not a silent in-place edit.
+- Full cross-statement transactionality for the submit pipeline — the idempotency guarantee (one `processing_jobs` row per claim, ever) is real and DB-enforced, but steps after it are sequential individually-committed writes, not one wrapped transaction. See `docs/02-architecture.md` and `docs/progress/DECISIONS.md`.

@@ -8,14 +8,17 @@ const INTERNAL_PACKAGES = [
   '@kit/accounts',
   '@kit/access-control',
   '@kit/claims',
+  '@kit/edi',
   '@kit/entities',
   '@kit/organizations',
   '@kit/payer-rules',
   '@kit/payers',
   '@kit/shared',
   '@kit/supabase',
+  '@kit/transaction-trace',
   '@kit/i18n',
   '@kit/next',
+  'worker',
 ];
 
 /** @type {import('next').NextConfig} */

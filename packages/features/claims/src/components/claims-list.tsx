@@ -31,6 +31,8 @@ const STATUS_VARIANT: Record<string, 'default' | 'outline' | 'destructive' | 'se
   validation_failed: 'destructive',
   validated: 'secondary',
   approved: 'default',
+  submitted: 'secondary',
+  accepted_for_adjudication: 'default',
 };
 
 export function ClaimsList({
@@ -80,7 +82,7 @@ export function ClaimsList({
         header: 'Status',
         cell: ({ row }) => (
           <Badge variant={STATUS_VARIANT[row.original.status] ?? 'outline'}>
-            {row.original.status.replace('_', ' ')}
+            {row.original.status.replaceAll('_', ' ')}
           </Badge>
         ),
       },

@@ -70,6 +70,66 @@ export type Database = {
         }
         Relationships: []
       }
+      acknowledgments: {
+        Row: {
+          ack_type: string
+          code: string
+          created_at: string | null
+          created_by: string | null
+          edi_transaction_id: string
+          explanation: string
+          gs06: string | null
+          id: string
+          isa13: string | null
+          organization_id: string
+          st02: string | null
+          status: string
+        }
+        Insert: {
+          ack_type: string
+          code: string
+          created_at?: string | null
+          created_by?: string | null
+          edi_transaction_id: string
+          explanation: string
+          gs06?: string | null
+          id?: string
+          isa13?: string | null
+          organization_id: string
+          st02?: string | null
+          status: string
+        }
+        Update: {
+          ack_type?: string
+          code?: string
+          created_at?: string | null
+          created_by?: string | null
+          edi_transaction_id?: string
+          explanation?: string
+          gs06?: string | null
+          id?: string
+          isa13?: string | null
+          organization_id?: string
+          st02?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "acknowledgments_edi_transaction_id_fkey"
+            columns: ["edi_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "edi_transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "acknowledgments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       claim_batches: {
         Row: {
           batch_name: string | null
@@ -534,6 +594,118 @@ export type Database = {
             columns: ["subscriber_id"]
             isOneToOne: false
             referencedRelation: "subscribers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      edi_payloads: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          direction: string
+          edi_transaction_id: string
+          id: string
+          organization_id: string
+          payload_hash: string
+          raw_payload: string
+          transaction_type: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          direction: string
+          edi_transaction_id: string
+          id?: string
+          organization_id: string
+          payload_hash: string
+          raw_payload: string
+          transaction_type: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          direction?: string
+          edi_transaction_id?: string
+          id?: string
+          organization_id?: string
+          payload_hash?: string
+          raw_payload?: string
+          transaction_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "edi_payloads_edi_transaction_id_fkey"
+            columns: ["edi_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "edi_transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "edi_payloads_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      edi_transactions: {
+        Row: {
+          batch_id: string | null
+          claim_id: string
+          created_at: string | null
+          created_by: string | null
+          gs06: string
+          id: string
+          isa13: string
+          organization_id: string
+          st02: string
+          transaction_type: string
+        }
+        Insert: {
+          batch_id?: string | null
+          claim_id: string
+          created_at?: string | null
+          created_by?: string | null
+          gs06: string
+          id?: string
+          isa13: string
+          organization_id: string
+          st02: string
+          transaction_type: string
+        }
+        Update: {
+          batch_id?: string | null
+          claim_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          gs06?: string
+          id?: string
+          isa13?: string
+          organization_id?: string
+          st02?: string
+          transaction_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "edi_transactions_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "claim_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "edi_transactions_claim_id_fkey"
+            columns: ["claim_id"]
+            isOneToOne: true
+            referencedRelation: "claims"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "edi_transactions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
@@ -1332,6 +1504,63 @@ export type Database = {
         }
         Relationships: []
       }
+      processing_jobs: {
+        Row: {
+          claim_id: string
+          completed_at: string | null
+          correlation_id: string
+          created_at: string | null
+          created_by: string | null
+          id: string
+          idempotency_key: string
+          organization_id: string
+          result: Json | null
+          started_at: string | null
+          status: string
+        }
+        Insert: {
+          claim_id: string
+          completed_at?: string | null
+          correlation_id: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          idempotency_key: string
+          organization_id: string
+          result?: Json | null
+          started_at?: string | null
+          status?: string
+        }
+        Update: {
+          claim_id?: string
+          completed_at?: string | null
+          correlation_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          idempotency_key?: string
+          organization_id?: string
+          result?: Json | null
+          started_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "processing_jobs_claim_id_fkey"
+            columns: ["claim_id"]
+            isOneToOne: true
+            referencedRelation: "claims"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "processing_jobs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       professional_claim_details: {
         Row: {
           claim_id: string
@@ -1446,6 +1675,61 @@ export type Database = {
           },
         ]
       }
+      replay_attempts: {
+        Row: {
+          attempted_at: string | null
+          attempted_by: string | null
+          claim_id: string
+          id: string
+          idempotency_key: string
+          organization_id: string
+          outcome: string
+          processing_job_id: string | null
+        }
+        Insert: {
+          attempted_at?: string | null
+          attempted_by?: string | null
+          claim_id: string
+          id?: string
+          idempotency_key: string
+          organization_id: string
+          outcome: string
+          processing_job_id?: string | null
+        }
+        Update: {
+          attempted_at?: string | null
+          attempted_by?: string | null
+          claim_id?: string
+          id?: string
+          idempotency_key?: string
+          organization_id?: string
+          outcome?: string
+          processing_job_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "replay_attempts_claim_id_fkey"
+            columns: ["claim_id"]
+            isOneToOne: false
+            referencedRelation: "claims"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "replay_attempts_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "replay_attempts_processing_job_id_fkey"
+            columns: ["processing_job_id"]
+            isOneToOne: false
+            referencedRelation: "processing_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       role_permissions: {
         Row: {
           created_at: string | null
@@ -1505,6 +1789,73 @@ export type Database = {
           name?: string
         }
         Relationships: []
+      }
+      rule_evaluations: {
+        Row: {
+          category: string | null
+          claim_id: string
+          created_at: string | null
+          created_by: string | null
+          explanation: string | null
+          id: string
+          organization_id: string
+          passed: boolean
+          processing_job_id: string | null
+          rejection_or_denial: string | null
+          rule_code: string
+          severity: string | null
+        }
+        Insert: {
+          category?: string | null
+          claim_id: string
+          created_at?: string | null
+          created_by?: string | null
+          explanation?: string | null
+          id?: string
+          organization_id: string
+          passed: boolean
+          processing_job_id?: string | null
+          rejection_or_denial?: string | null
+          rule_code: string
+          severity?: string | null
+        }
+        Update: {
+          category?: string | null
+          claim_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          explanation?: string | null
+          id?: string
+          organization_id?: string
+          passed?: boolean
+          processing_job_id?: string | null
+          rejection_or_denial?: string | null
+          rule_code?: string
+          severity?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rule_evaluations_claim_id_fkey"
+            columns: ["claim_id"]
+            isOneToOne: false
+            referencedRelation: "claims"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rule_evaluations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rule_evaluations_processing_job_id_fkey"
+            columns: ["processing_job_id"]
+            isOneToOne: false
+            referencedRelation: "processing_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       subscribers: {
         Row: {
@@ -1568,6 +1919,143 @@ export type Database = {
             columns: ["patient_id"]
             isOneToOne: false
             referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      transaction_events: {
+        Row: {
+          actor_id: string | null
+          actor_type: string
+          batch_id: string | null
+          claim_id: string
+          code: string | null
+          correlation_id: string
+          created_at: string | null
+          created_by: string | null
+          edi_transaction_id: string | null
+          event_category: string
+          event_name: string
+          explanation: string
+          gs06: string | null
+          id: string
+          isa13: string | null
+          next_recommended_action: string | null
+          occurred_at: string
+          organization_id: string
+          payer_id: string | null
+          previous_event_id: string | null
+          request_payload_hash: string | null
+          response_payload_hash: string | null
+          route: string | null
+          rule_id: string | null
+          st02: string | null
+          status: string
+        }
+        Insert: {
+          actor_id?: string | null
+          actor_type: string
+          batch_id?: string | null
+          claim_id: string
+          code?: string | null
+          correlation_id: string
+          created_at?: string | null
+          created_by?: string | null
+          edi_transaction_id?: string | null
+          event_category: string
+          event_name: string
+          explanation: string
+          gs06?: string | null
+          id?: string
+          isa13?: string | null
+          next_recommended_action?: string | null
+          occurred_at?: string
+          organization_id: string
+          payer_id?: string | null
+          previous_event_id?: string | null
+          request_payload_hash?: string | null
+          response_payload_hash?: string | null
+          route?: string | null
+          rule_id?: string | null
+          st02?: string | null
+          status: string
+        }
+        Update: {
+          actor_id?: string | null
+          actor_type?: string
+          batch_id?: string | null
+          claim_id?: string
+          code?: string | null
+          correlation_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          edi_transaction_id?: string | null
+          event_category?: string
+          event_name?: string
+          explanation?: string
+          gs06?: string | null
+          id?: string
+          isa13?: string | null
+          next_recommended_action?: string | null
+          occurred_at?: string
+          organization_id?: string
+          payer_id?: string | null
+          previous_event_id?: string | null
+          request_payload_hash?: string | null
+          response_payload_hash?: string | null
+          route?: string | null
+          rule_id?: string | null
+          st02?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transaction_events_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "claim_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transaction_events_claim_id_fkey"
+            columns: ["claim_id"]
+            isOneToOne: false
+            referencedRelation: "claims"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transaction_events_edi_transaction_id_fkey"
+            columns: ["edi_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "edi_transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transaction_events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transaction_events_payer_id_fkey"
+            columns: ["payer_id"]
+            isOneToOne: false
+            referencedRelation: "payers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transaction_events_previous_event_id_fkey"
+            columns: ["previous_event_id"]
+            isOneToOne: false
+            referencedRelation: "transaction_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transaction_events_rule_id_fkey"
+            columns: ["rule_id"]
+            isOneToOne: false
+            referencedRelation: "payer_rules"
             referencedColumns: ["id"]
           },
         ]

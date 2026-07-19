@@ -62,6 +62,9 @@ importers:
       '@kit/claims':
         specifier: workspace:*
         version: link:../../packages/features/claims
+      '@kit/edi':
+        specifier: workspace:*
+        version: link:../../packages/features/edi
       '@kit/entities':
         specifier: workspace:*
         version: link:../../packages/features/entities
@@ -83,6 +86,9 @@ importers:
       '@kit/supabase':
         specifier: workspace:*
         version: link:../../packages/supabase
+      '@kit/transaction-trace':
+        specifier: workspace:*
+        version: link:../../packages/features/transaction-trace
       '@kit/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -143,6 +149,9 @@ importers:
       tailwind-merge:
         specifier: ^3.3.1
         version: 3.3.1
+      worker:
+        specifier: workspace:*
+        version: link:../worker
       zod:
         specifier: ^3.25.32
         version: 3.25.76
@@ -204,6 +213,33 @@ importers:
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
+
+  apps/worker:
+    devDependencies:
+      '@kit/claims':
+        specifier: workspace:*
+        version: link:../../packages/features/claims
+      '@kit/eslint-config':
+        specifier: workspace:*
+        version: link:../../tooling/eslint
+      '@kit/payer-rules':
+        specifier: workspace:*
+        version: link:../../packages/features/payer-rules
+      '@kit/prettier-config':
+        specifier: workspace:*
+        version: link:../../tooling/prettier
+      '@kit/supabase':
+        specifier: workspace:*
+        version: link:../../packages/supabase
+      '@kit/tsconfig':
+        specifier: workspace:*
+        version: link:../../tooling/typescript
+      '@supabase/supabase-js':
+        specifier: 2.75.0
+        version: 2.75.0
+      '@types/node':
+        specifier: ^24.7.1
+        version: 24.7.1
 
   packages/features/access-control:
     devDependencies:
@@ -442,6 +478,69 @@ importers:
       sonner:
         specifier: ^2.0.7
         version: 2.0.7(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+      zod:
+        specifier: ^3.25.32
+        version: 3.25.76
+
+  packages/features/edi:
+    devDependencies:
+      '@kit/access-control':
+        specifier: workspace:*
+        version: link:../access-control
+      '@kit/claims':
+        specifier: workspace:*
+        version: link:../claims
+      '@kit/eslint-config':
+        specifier: workspace:*
+        version: link:../../../tooling/eslint
+      '@kit/next':
+        specifier: workspace:*
+        version: link:../../next
+      '@kit/prettier-config':
+        specifier: workspace:*
+        version: link:../../../tooling/prettier
+      '@kit/shared':
+        specifier: workspace:*
+        version: link:../../shared
+      '@kit/supabase':
+        specifier: workspace:*
+        version: link:../../supabase
+      '@kit/tsconfig':
+        specifier: workspace:*
+        version: link:../../../tooling/typescript
+      '@kit/ui':
+        specifier: workspace:*
+        version: link:../../ui
+      '@supabase/supabase-js':
+        specifier: 2.75.0
+        version: 2.75.0
+      '@tanstack/react-query':
+        specifier: 5.90.2
+        version: 5.90.2(react@19.2.1)
+      '@types/node':
+        specifier: ^24.7.1
+        version: 24.7.1
+      '@types/react':
+        specifier: 19.2.7
+        version: 19.2.7
+      '@types/react-dom':
+        specifier: 19.2.3
+        version: 19.2.3(@types/react@19.2.7)
+      next:
+        specifier: 15.5.9
+        version: 15.5.9(@playwright/test@1.56.0)(babel-plugin-react-compiler@19.1.0-rc.3)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+      react:
+        specifier: 19.2.1
+        version: 19.2.1
+      react-dom:
+        specifier: 19.2.1
+        version: 19.2.1(react@19.2.1)
+      sonner:
+        specifier: ^2.0.7
+        version: 2.0.7(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+      worker:
+        specifier: workspace:*
+        version: link:../../../apps/worker
       zod:
         specifier: ^3.25.32
         version: 3.25.76
@@ -733,6 +832,42 @@ importers:
       zod:
         specifier: ^3.25.32
         version: 3.25.76
+
+  packages/features/transaction-trace:
+    devDependencies:
+      '@kit/eslint-config':
+        specifier: workspace:*
+        version: link:../../../tooling/eslint
+      '@kit/prettier-config':
+        specifier: workspace:*
+        version: link:../../../tooling/prettier
+      '@kit/supabase':
+        specifier: workspace:*
+        version: link:../../supabase
+      '@kit/tsconfig':
+        specifier: workspace:*
+        version: link:../../../tooling/typescript
+      '@kit/ui':
+        specifier: workspace:*
+        version: link:../../ui
+      '@supabase/supabase-js':
+        specifier: 2.75.0
+        version: 2.75.0
+      '@types/node':
+        specifier: ^24.7.1
+        version: 24.7.1
+      '@types/react':
+        specifier: 19.2.7
+        version: 19.2.7
+      '@types/react-dom':
+        specifier: 19.2.3
+        version: 19.2.3(@types/react@19.2.7)
+      react:
+        specifier: 19.2.1
+        version: 19.2.1
+      react-dom:
+        specifier: 19.2.1
+        version: 19.2.1(react@19.2.1)
 
   packages/i18n:
     dependencies:

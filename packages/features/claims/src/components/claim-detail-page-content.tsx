@@ -19,6 +19,8 @@ const STATUS_VARIANT: Record<string, 'default' | 'outline' | 'destructive' | 'se
   validation_failed: 'destructive',
   validated: 'secondary',
   approved: 'default',
+  submitted: 'secondary',
+  accepted_for_adjudication: 'default',
 };
 
 interface PersonRef {
@@ -164,7 +166,7 @@ export function ClaimDetailPageContent({
           </p>
         </div>
         <Badge data-test={'claim-status-badge'} variant={STATUS_VARIANT[claim.status] ?? 'outline'}>
-          {claim.status.replace('_', ' ')}
+          {claim.status.replaceAll('_', ' ')}
         </Badge>
       </div>
 

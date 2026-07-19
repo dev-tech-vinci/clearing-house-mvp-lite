@@ -1,6 +1,6 @@
 # Data Model
 
-> Updated per phase. Phase 2 introduces the identity/tenancy entity group; Phase 3 adds provider/coverage; Phase 4 adds the global payer/rules group; Phase 5 adds claims. Later phases add EDI/trace, remittance, support/docs, and governance groups — see `data-model-erd.mmd` for the full target ERD.
+> Updated per phase. Phase 2 introduces the identity/tenancy entity group; Phase 3 adds provider/coverage; Phase 4 adds the global payer/rules group; Phase 5 adds claims; Phase 6 adds EDI/trace. Later phases add remittance, support/docs, and governance groups — see `data-model-erd.mmd` for the full target ERD.
 
 ## Identity / tenancy (Phase 2)
 
@@ -95,6 +95,25 @@ Same trigger pattern as Phase 3 (`kit.check_*_org` functions), reused and extend
 
 `claims` UPDATE uses **two permissive policies** (`claims_update_edit` requiring `claims.create_edit` and excluding `status = 'approved'`; `claims_update_approve` requiring `claims.approve_submit`) — the first use of multiple permissive policies for the same command in this repo. See `docs/05-claim-lifecycle.md` for why this throws (rather than silently filtering, as Phase 4's single-policy `payers_update` does) when a `claims_specialist` attempts to approve.
 
+## EDI / trace (Phase 6)
+
+Introduced by `apps/web/supabase/migrations/20260719040000_edi.sql`. Org-owned, gated on `has_org_access` (read) / `has_permission('claims.approve_submit')` (write — these are all system-generated rows, not user-editable forms). Full detail (pipeline, idempotency, rejection-vs-denial): `docs/05-claim-lifecycle.md`, `docs/02-architecture.md`.
+
+| Table | Purpose |
+|---|---|
+| `processing_jobs` | One row per claim submission, ever (`claim_id` `UNIQUE` — this constraint *is* the idempotency guarantee). |
+| `edi_transactions` / `edi_payloads` | The outbound 837 (control numbers) and every raw payload (outbound + inbound acks), hashed. |
+| `acknowledgments` | Simulated TA1/999/277CA results. |
+| `rule_evaluations` | Every applicable rule's pass/fail at submit time (fuller audit trail than `claims.last_validation_result`, which is failures-only). |
+| `replay_attempts` | One row per submit attempt, first or duplicate. |
+| `transaction_events` | **Append-only** — `INSERT` policy only, no `UPDATE`/`DELETE` grant to `authenticated` at all. Every trace field from the architecture doc. |
+
+`claims.status` (widened from Phase 5's `varchar(20)` to `varchar(30)` — `'accepted_for_adjudication'` didn't fit) gains `submitted` and `accepted_for_adjudication`; the `claims_update_approve` RLS policy is extended (same `claims.approve_submit` permission gates both approve and submit).
+
+### Cross-org FK-consistency
+
+Same trigger pattern as Phase 3/5: the existing `kit.check_claim_child_org_consistency()` (keyed on `claim_id`) is reused for `processing_jobs`/`edi_transactions`/`rule_evaluations`/`replay_attempts`/`transaction_events`; a new analogous `kit.check_edi_transaction_child_org_consistency()` (keyed on `edi_transaction_id`) covers `edi_payloads`/`acknowledgments`.
+
 ## Future entity groups (not yet built)
 
-EDI/trace (Phase 6) · Remittance (Phase 7) · Support/docs (Phase 8) · Governance/audit (Phase 8). See `data-model-erd.mmd` for the abridged target ERD across all phases.
+Remittance (Phase 7) · Support/docs (Phase 8) · Governance/audit (Phase 8). See `data-model-erd.mmd` for the abridged target ERD across all phases.

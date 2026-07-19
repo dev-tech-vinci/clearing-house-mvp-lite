@@ -70,17 +70,30 @@ function checkPayerEdit(input: ValidateClaimInput): boolean {
   return input.hasActivePayerEnrollment;
 }
 
+export interface RuleEvaluationResult {
+  ruleCode: string;
+  fieldPath: string | null;
+  passed: boolean;
+  severity: 'error' | 'warning' | 'info';
+  rejectionOrDenial: 'rejection' | 'denial' | 'not_applicable';
+  explanation: string;
+  suggestedCorrection: string | null;
+}
+
 /**
  * Runs every applicable rule (universal + matching claim_type + matching
  * payer_edit -- adjudication-category rules are post-adjudication and
- * intentionally not evaluated here, see docs/05-claim-lifecycle.md) against
- * the claim and returns one ValidationError per failing rule.
+ * intentionally not evaluated here, see docs/05-claim-lifecycle.md) and
+ * returns one result per rule, pass or fail. Phase 6's submit pipeline
+ * persists every one of these to `rule_evaluations` (a full audit trail),
+ * not just the failures Phase 5's interactive Validate button cares about
+ * -- see evaluateClaimRules below for the failures-only view.
  */
-export function evaluateClaimRules(
+export function evaluateClaimRulesDetailed(
   input: ValidateClaimInput,
   rules: ClaimRuleVersionContext[],
-): ValidationError[] {
-  const errors: ValidationError[] = [];
+): RuleEvaluationResult[] {
+  const results: RuleEvaluationResult[] = [];
 
   for (const rule of rules) {
     const isPayerEdit = rule.ruleCode.startsWith('SIM-RULE-EDIT-');
@@ -88,13 +101,14 @@ export function evaluateClaimRules(
       ? checkPayerEdit
       : UNIVERSAL_AND_CLAIM_TYPE_CHECKS[rule.ruleCode];
 
-    if (!check || check(input)) {
+    if (!check) {
       continue;
     }
 
-    errors.push({
+    results.push({
       ruleCode: rule.ruleCode,
       fieldPath: rule.fieldPath,
+      passed: check(input),
       severity: rule.severity,
       rejectionOrDenial: rule.rejectionOrDenial,
       explanation: rule.explanation,
@@ -102,5 +116,19 @@ export function evaluateClaimRules(
     });
   }
 
-  return errors;
+  return results;
+}
+
+/**
+ * Failures-only view of evaluateClaimRulesDetailed, used by Phase 5's
+ * interactive Validate button (packages/features/claims/src/server/
+ * validate-claim.server.ts), which only needs to show what's wrong.
+ */
+export function evaluateClaimRules(
+  input: ValidateClaimInput,
+  rules: ClaimRuleVersionContext[],
+): ValidationError[] {
+  return evaluateClaimRulesDetailed(input, rules)
+    .filter((result) => !result.passed)
+    .map(({ passed: _passed, ...error }) => error);
 }
