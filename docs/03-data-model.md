@@ -1,6 +1,6 @@
 # Data Model
 
-> Updated per phase. Phase 2 introduces the identity/tenancy entity group; Phase 3 adds provider/coverage; Phase 4 adds the global payer/rules group. Later phases add claims, EDI/trace, remittance, support/docs, and governance groups — see `data-model-erd.mmd` for the full target ERD.
+> Updated per phase. Phase 2 introduces the identity/tenancy entity group; Phase 3 adds provider/coverage; Phase 4 adds the global payer/rules group; Phase 5 adds claims. Later phases add EDI/trace, remittance, support/docs, and governance groups — see `data-model-erd.mmd` for the full target ERD.
 
 ## Identity / tenancy (Phase 2)
 
@@ -76,6 +76,25 @@ Introduced by `apps/web/supabase/migrations/20260719015820_payers.sql`. Unlike e
 
 `public.is_platform_admin() returns boolean` — `SECURITY DEFINER`, `set search_path = ''`, true if the caller holds `platform_super_admin` in any organization membership. Used only to gate writes on the seven tables above; grants no visibility into tenant-owned data and does not reopen the Phase 2 decision against a platform-role cross-org RLS bypass (see `docs/progress/DECISIONS.md`).
 
+## Claims (Phase 5)
+
+Introduced by `apps/web/supabase/migrations/20260719030000_claims.sql`. Org-owned, tenancy contract, `has_org_access`/`has_permission`-gated RLS. Full detail (rule-engine wiring, RBAC design, unsupported-loop list, status scope): `docs/05-claim-lifecycle.md`.
+
+| Table | Purpose |
+|---|---|
+| `claims` | Header (`claim_type`, patient/subscriber/coverage/billing-provider, `status` scoped to `draft`/`validation_failed`/`validated`/`approved` this phase, `last_validation_result`). |
+| `professional_claim_details` / `institutional_claim_details` | 1:1 detail rows (rendering provider / facility+type-of-bill+admission-discharge). |
+| `claim_diagnoses` / `claim_lines` | ICD-10-CM diagnosis pointers; CPT/HCPCS or revenue-code service lines. |
+| `claim_documents` / `claim_relationships` / `claim_batches` | Schema + RLS only this phase — no dedicated UI yet (document storage, correction/resubmission, and batch/EDI generation are later phases). |
+
+### Cross-org FK-consistency
+
+Same trigger pattern as Phase 3 (`kit.check_*_org` functions), reused and extended: `kit.check_claim_org_consistency()` on `claims`; a shared `kit.check_claim_child_org_consistency()` for the simple children; two narrower triggers for the rendering-provider/facility org match on the two detail tables (which also verify `claim_type` agreement); `kit.check_claim_relationships_org()` for cross-claim links.
+
+### RBAC at the RLS layer
+
+`claims` UPDATE uses **two permissive policies** (`claims_update_edit` requiring `claims.create_edit` and excluding `status = 'approved'`; `claims_update_approve` requiring `claims.approve_submit`) — the first use of multiple permissive policies for the same command in this repo. See `docs/05-claim-lifecycle.md` for why this throws (rather than silently filtering, as Phase 4's single-policy `payers_update` does) when a `claims_specialist` attempts to approve.
+
 ## Future entity groups (not yet built)
 
-Claims (Phase 5) · EDI/trace (Phase 6) · Remittance (Phase 7) · Support/docs (Phase 8) · Governance/audit (Phase 8). See `data-model-erd.mmd` for the abridged target ERD across all phases.
+EDI/trace (Phase 6) · Remittance (Phase 7) · Support/docs (Phase 8) · Governance/audit (Phase 8). See `data-model-erd.mmd` for the abridged target ERD across all phases.

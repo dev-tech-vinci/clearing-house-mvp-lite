@@ -70,6 +70,385 @@ export type Database = {
         }
         Relationships: []
       }
+      claim_batches: {
+        Row: {
+          batch_name: string | null
+          created_at: string | null
+          created_by: string | null
+          deleted_at: string | null
+          id: string
+          organization_id: string
+          sim_batch_id: string
+          status: string
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          batch_name?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          deleted_at?: string | null
+          id?: string
+          organization_id: string
+          sim_batch_id?: string
+          status?: string
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          batch_name?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          deleted_at?: string | null
+          id?: string
+          organization_id?: string
+          sim_batch_id?: string
+          status?: string
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "claim_batches_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      claim_diagnoses: {
+        Row: {
+          claim_id: string
+          created_at: string | null
+          created_by: string | null
+          diagnosis_code: string
+          diagnosis_pointer: number
+          id: string
+          is_primary: boolean
+          organization_id: string
+        }
+        Insert: {
+          claim_id: string
+          created_at?: string | null
+          created_by?: string | null
+          diagnosis_code: string
+          diagnosis_pointer: number
+          id?: string
+          is_primary?: boolean
+          organization_id: string
+        }
+        Update: {
+          claim_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          diagnosis_code?: string
+          diagnosis_pointer?: number
+          id?: string
+          is_primary?: boolean
+          organization_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "claim_diagnoses_claim_id_fkey"
+            columns: ["claim_id"]
+            isOneToOne: false
+            referencedRelation: "claims"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "claim_diagnoses_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      claim_documents: {
+        Row: {
+          claim_id: string
+          created_at: string | null
+          created_by: string | null
+          document_name: string
+          document_type: string | null
+          id: string
+          notes: string | null
+          organization_id: string
+        }
+        Insert: {
+          claim_id: string
+          created_at?: string | null
+          created_by?: string | null
+          document_name: string
+          document_type?: string | null
+          id?: string
+          notes?: string | null
+          organization_id: string
+        }
+        Update: {
+          claim_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          document_name?: string
+          document_type?: string | null
+          id?: string
+          notes?: string | null
+          organization_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "claim_documents_claim_id_fkey"
+            columns: ["claim_id"]
+            isOneToOne: false
+            referencedRelation: "claims"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "claim_documents_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      claim_lines: {
+        Row: {
+          charge_amount: number
+          claim_id: string
+          created_at: string | null
+          created_by: string | null
+          diagnosis_pointers: number[]
+          id: string
+          line_number: number
+          modifiers: string[] | null
+          organization_id: string
+          place_of_service: string | null
+          procedure_code: string | null
+          revenue_code: string | null
+          service_date: string
+          units: number
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          charge_amount: number
+          claim_id: string
+          created_at?: string | null
+          created_by?: string | null
+          diagnosis_pointers?: number[]
+          id?: string
+          line_number: number
+          modifiers?: string[] | null
+          organization_id: string
+          place_of_service?: string | null
+          procedure_code?: string | null
+          revenue_code?: string | null
+          service_date: string
+          units?: number
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          charge_amount?: number
+          claim_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          diagnosis_pointers?: number[]
+          id?: string
+          line_number?: number
+          modifiers?: string[] | null
+          organization_id?: string
+          place_of_service?: string | null
+          procedure_code?: string | null
+          revenue_code?: string | null
+          service_date?: string
+          units?: number
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "claim_lines_claim_id_fkey"
+            columns: ["claim_id"]
+            isOneToOne: false
+            referencedRelation: "claims"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "claim_lines_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      claim_relationships: {
+        Row: {
+          claim_id: string
+          created_at: string | null
+          created_by: string | null
+          id: string
+          organization_id: string
+          related_claim_id: string
+          relationship_type: string
+        }
+        Insert: {
+          claim_id: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          organization_id: string
+          related_claim_id: string
+          relationship_type: string
+        }
+        Update: {
+          claim_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          organization_id?: string
+          related_claim_id?: string
+          relationship_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "claim_relationships_claim_id_fkey"
+            columns: ["claim_id"]
+            isOneToOne: false
+            referencedRelation: "claims"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "claim_relationships_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "claim_relationships_related_claim_id_fkey"
+            columns: ["related_claim_id"]
+            isOneToOne: false
+            referencedRelation: "claims"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      claims: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          batch_id: string | null
+          billing_provider_id: string
+          claim_type: string
+          coverage_id: string
+          created_at: string | null
+          created_by: string | null
+          deleted_at: string | null
+          id: string
+          last_validation_result: Json | null
+          notes: string | null
+          organization_id: string
+          patient_id: string
+          sim_claim_id: string
+          status: string
+          subscriber_id: string
+          updated_at: string | null
+          updated_by: string | null
+          validated_at: string | null
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          batch_id?: string | null
+          billing_provider_id: string
+          claim_type: string
+          coverage_id: string
+          created_at?: string | null
+          created_by?: string | null
+          deleted_at?: string | null
+          id?: string
+          last_validation_result?: Json | null
+          notes?: string | null
+          organization_id: string
+          patient_id: string
+          sim_claim_id?: string
+          status?: string
+          subscriber_id: string
+          updated_at?: string | null
+          updated_by?: string | null
+          validated_at?: string | null
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          batch_id?: string | null
+          billing_provider_id?: string
+          claim_type?: string
+          coverage_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          deleted_at?: string | null
+          id?: string
+          last_validation_result?: Json | null
+          notes?: string | null
+          organization_id?: string
+          patient_id?: string
+          sim_claim_id?: string
+          status?: string
+          subscriber_id?: string
+          updated_at?: string | null
+          updated_by?: string | null
+          validated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "claims_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "claim_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "claims_billing_provider_id_fkey"
+            columns: ["billing_provider_id"]
+            isOneToOne: false
+            referencedRelation: "providers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "claims_coverage_id_fkey"
+            columns: ["coverage_id"]
+            isOneToOne: false
+            referencedRelation: "coverages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "claims_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "claims_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "claims_subscriber_id_fkey"
+            columns: ["subscriber_id"]
+            isOneToOne: false
+            referencedRelation: "subscribers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       coverages: {
         Row: {
           coverage_type: string
@@ -220,6 +599,67 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "facilities_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      institutional_claim_details: {
+        Row: {
+          admission_date: string | null
+          claim_id: string
+          created_at: string | null
+          created_by: string | null
+          discharge_date: string | null
+          facility_id: string
+          organization_id: string
+          type_of_bill: string
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          admission_date?: string | null
+          claim_id: string
+          created_at?: string | null
+          created_by?: string | null
+          discharge_date?: string | null
+          facility_id: string
+          organization_id: string
+          type_of_bill: string
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          admission_date?: string | null
+          claim_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          discharge_date?: string | null
+          facility_id?: string
+          organization_id?: string
+          type_of_bill?: string
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "institutional_claim_details_claim_id_fkey"
+            columns: ["claim_id"]
+            isOneToOne: true
+            referencedRelation: "claims"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "institutional_claim_details_facility_id_fkey"
+            columns: ["facility_id"]
+            isOneToOne: false
+            referencedRelation: "facilities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "institutional_claim_details_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
@@ -892,6 +1332,58 @@ export type Database = {
         }
         Relationships: []
       }
+      professional_claim_details: {
+        Row: {
+          claim_id: string
+          created_at: string | null
+          created_by: string | null
+          organization_id: string
+          rendering_provider_id: string
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          claim_id: string
+          created_at?: string | null
+          created_by?: string | null
+          organization_id: string
+          rendering_provider_id: string
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          claim_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          organization_id?: string
+          rendering_provider_id?: string
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professional_claim_details_claim_id_fkey"
+            columns: ["claim_id"]
+            isOneToOne: true
+            referencedRelation: "claims"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_claim_details_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_claim_details_rendering_provider_id_fkey"
+            columns: ["rendering_provider_id"]
+            isOneToOne: false
+            referencedRelation: "providers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       providers: {
         Row: {
           created_at: string | null
@@ -1126,6 +1618,42 @@ export type Database = {
           user_id: string
         }
       }
+      create_institutional_claim: {
+        Args: {
+          p_admission_date?: string
+          p_billing_provider_id: string
+          p_coverage_id: string
+          p_discharge_date?: string
+          p_facility_id: string
+          p_notes?: string
+          p_organization_id: string
+          p_patient_id: string
+          p_subscriber_id: string
+          p_type_of_bill: string
+        }
+        Returns: {
+          approved_at: string | null
+          approved_by: string | null
+          batch_id: string | null
+          billing_provider_id: string
+          claim_type: string
+          coverage_id: string
+          created_at: string | null
+          created_by: string | null
+          deleted_at: string | null
+          id: string
+          last_validation_result: Json | null
+          notes: string | null
+          organization_id: string
+          patient_id: string
+          sim_claim_id: string
+          status: string
+          subscriber_id: string
+          updated_at: string | null
+          updated_by: string | null
+          validated_at: string | null
+        }
+      }
       create_organization: {
         Args: { org_name: string; org_slug: string }
         Returns: {
@@ -1137,6 +1665,39 @@ export type Database = {
           slug: string
           updated_at: string | null
           updated_by: string | null
+        }
+      }
+      create_professional_claim: {
+        Args: {
+          p_billing_provider_id: string
+          p_coverage_id: string
+          p_notes?: string
+          p_organization_id: string
+          p_patient_id: string
+          p_rendering_provider_id: string
+          p_subscriber_id: string
+        }
+        Returns: {
+          approved_at: string | null
+          approved_by: string | null
+          batch_id: string | null
+          billing_provider_id: string
+          claim_type: string
+          coverage_id: string
+          created_at: string | null
+          created_by: string | null
+          deleted_at: string | null
+          id: string
+          last_validation_result: Json | null
+          notes: string | null
+          organization_id: string
+          patient_id: string
+          sim_claim_id: string
+          status: string
+          subscriber_id: string
+          updated_at: string | null
+          updated_by: string | null
+          validated_at: string | null
         }
       }
       get_organization_members: {

@@ -86,6 +86,38 @@ export async function requirePlatformAdmin(
   return null;
 }
 
+/**
+ * Org-permission check for /api/v1/claims write routes, mirroring
+ * requirePlatformAdmin but for an org-scoped permission (has_permission)
+ * instead of the global is_platform_admin() check.
+ */
+export async function requireOrgPermission(
+  client: SupabaseClient<Database>,
+  organizationId: string,
+  permissionKey: string,
+  correlationId: string,
+) {
+  const { data: allowed, error } = await client.rpc('has_permission', {
+    target_org_id: organizationId,
+    permission_key: permissionKey,
+  });
+
+  if (error) {
+    return apiError(500, 'internal_error', error.message, correlationId);
+  }
+
+  if (!allowed) {
+    return apiError(
+      403,
+      'forbidden',
+      `This action requires the ${permissionKey} permission`,
+      correlationId,
+    );
+  }
+
+  return null;
+}
+
 export function parsePagination(searchParams: URLSearchParams) {
   const limitParam = Number(searchParams.get('limit'));
   const limit = Number.isFinite(limitParam) && limitParam > 0 ? Math.min(limitParam, 200) : 50;
