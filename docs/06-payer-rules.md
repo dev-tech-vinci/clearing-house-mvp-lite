@@ -42,7 +42,7 @@ Exactly ten, matching the ten-claim test-category set the build plan uses in lat
 | `SIM-MKTPL-001` | `marketplace` | SIM Marketplace Exchange Plan |
 | `SIM-RBH-001` | `regional_bh` | SIM Regional Behavioral Health Network |
 
-Each has an alias row, a simulated clearinghouse route, and all 6 supported-transaction types seeded. Two carry `payer_test_profiles.default_outcome = 'denied'` (`SIM-RBH-001` — missing prior auth; `SIM-MDMCO-001` — benefit limit exhausted), foreshadowing Phase 7's "8 paid / 2 denied" ten-claim demo set; not enforced yet (`payer_test_profiles` is scaffolding until Phase 7 builds the actual simulator).
+Each has an alias row, a simulated clearinghouse route, and all 6 supported-transaction types seeded. Two carry `payer_test_profiles.default_outcome = 'denied'` (`SIM-RBH-001` — missing prior auth; `SIM-MDMCO-001` — benefit limit exhausted), realizing Phase 7's "8 paid / 2 denied" ten-claim demo set — see "Adjudication wiring" below for how the Phase 7 simulator actually consumes this.
 
 ## Rule categories and versioning
 
@@ -96,3 +96,11 @@ Phase 3 added `coverages.payer_id` and `organization_payer_enrollments.payer_id`
 ## Platform admin bootstrap — no self-service path yet
 
 There is no UI flow to grant a user the `platform_super_admin` role in this phase — Phase 4 builds only the admin surfaces that role can use once granted, not a bootstrap flow. See `docs/progress/KNOWN_ISSUES.md`.
+
+## Adjudication wiring (Phase 7)
+
+`payer_test_profiles` was scaffolding through Phase 4–6 — a `default_outcome` column with no code path that ever read it. Phase 7's migration (`20260719050000_remittances.sql`) is the first thing that both **reads** it (`apps/worker`'s `ClaimProcessor.adjudicate()` looks up the claim's payer via `coverage.payer_id` and branches on `payer_test_profiles.default_outcome` — never a per-claim or per-payer-ID branch in application code) and **completes** it: a new `denial_rule_code` column is backfilled for the two `default_outcome = 'denied'` payers, pointing at their already-seeded adjudication-category `payer_rules.rule_code` (`SIM-RULE-ADJ-SIM-RBH-001` for prior-auth, `SIM-RULE-ADJ-SIM-MDMCO-001` for benefit-limit).
+
+A denial's explanation is read from that rule's **live** `payer_rule_versions.explanation`, fetched fresh at adjudication time — editing the rule's text in `/admin/payer-rules` changes what a future denial shows immediately, the same "DB is the content, code is the mechanism" pattern Phase 5 established for pre-adjudication validation. The rule's `field_path` (`claim.priorAuthNumber` / `claim.benefitUnitsUsed`) is additionally used to resolve a `SIM-` prefixed CARC/RARC pair via a small fixed map in `apps/worker/src/lib/simulated-adjustment-codes.ts` — see `docs/05-claim-lifecycle.md` and `docs/progress/DECISIONS.md` for why these codes are never asserted as real X12 CARC/RARC values.
+
+A payer with no `payer_test_profiles` row, or one with `default_outcome = 'paid'` (the column's default), is always paid — there is no separate "list of denial payers" maintained anywhere in application code; adding a new denial scenario to the demo set means adding/updating exactly one `payer_test_profiles` row plus its `denial_rule_code`'s `payer_rules` seed, not touching `apps/worker`.

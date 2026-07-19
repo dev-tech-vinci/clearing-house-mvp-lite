@@ -16,6 +16,9 @@ const SIMULATION_HEADER_837 = (kind: '837P' | '837I') =>
 const SIMULATION_HEADER_ACK = (kind: 'TA1' | '999' | '277CA') =>
   `* SIMULATED X12 ${kind} ACKNOWLEDGMENT -- NOT FOR PRODUCTION USE -- Behavioral Health Clearinghouse Simulator`;
 
+const SIMULATION_HEADER_835 =
+  '* SIMULATED X12 835 -- NOT FOR PRODUCTION USE -- Behavioral Health Clearinghouse Simulator. CARC/RARC codes below are SIM- prefixed simulated codes, not official X12 code meanings.';
+
 function timestamp() {
   const now = new Date();
   const date = now.toISOString().slice(2, 10).replace(/-/g, '');
@@ -151,4 +154,60 @@ export function generateAckPayload(
     `GE*1*${gs06}~`,
     `IEA*1*${isa13}~`,
   ].join('\n');
+}
+
+export interface Synthetic835Adjustment {
+  group: 'CO' | 'PR' | 'OA' | 'PI';
+  carcCode: string;
+  amount: number;
+}
+
+export interface Synthetic835Input {
+  simClaimId: string;
+  simRemittanceId: string;
+  controlNumbers: ControlNumbers;
+  payerName: string;
+  payerSimId: string;
+  patientName: string;
+  chargeAmount: number;
+  paidAmount: number;
+  patientResponsibility: number;
+  outcome: 'paid' | 'denied';
+  adjustments: Synthetic835Adjustment[];
+}
+
+/**
+ * Simulated 835 remittance advice for a single claim. Like the 837
+ * generator, this is scoped and plausible-shaped, not production
+ * conformant. CLP02 uses the real X12 claim-status-code convention (1 =
+ * processed as primary/paid, 4 = denied) since that's a small, structural
+ * two-value flag, not a detailed proprietary code list.
+ */
+export function generate835Payload(input: Synthetic835Input): string {
+  const { isa13, gs06, st02 } = input.controlNumbers;
+  const { date, time } = timestamp();
+  const clp02 = input.outcome === 'paid' ? '1' : '4';
+
+  const segments: string[] = [
+    SIMULATION_HEADER_835,
+    `ISA*00*          *00*          *ZZ*SIMRECEIVER    *ZZ*SIMSENDER      *${date}*${time}*^*00501*${isa13}*0*P*:~`,
+    `GS*HP*SIMRECEIVER*SIMSENDER*20${date}*${time}*${gs06}*X*005010X221A1~`,
+    `ST*835*${st02}*005010X221A1~`,
+    `BPR*${input.outcome === 'paid' ? 'I' : 'D'}*${input.paidAmount.toFixed(2)}*C*ACH~`,
+    `TRN*1*${input.simRemittanceId}~`,
+    `N1*PR*${input.payerName}*PI*${input.payerSimId}~`,
+    `CLP*${input.simClaimId}*${clp02}*${input.chargeAmount.toFixed(2)}*${input.paidAmount.toFixed(2)}*${input.patientResponsibility.toFixed(2)}~`,
+    `NM1*QC*1*${input.patientName}~`,
+  ];
+
+  for (const adjustment of input.adjustments) {
+    segments.push(`CAS*${adjustment.group}*${adjustment.carcCode}*${adjustment.amount.toFixed(2)}~`);
+  }
+
+  const bodySegmentCount = segments.length - 3;
+  segments.push(`SE*${bodySegmentCount}*${st02}~`);
+  segments.push(`GE*1*${gs06}~`);
+  segments.push(`IEA*1*${isa13}~`);
+
+  return segments.join('\n');
 }

@@ -13,6 +13,7 @@ const INTERNAL_PACKAGES = [
   '@kit/organizations',
   '@kit/payer-rules',
   '@kit/payers',
+  '@kit/remittances',
   '@kit/shared',
   '@kit/supabase',
   '@kit/transaction-trace',

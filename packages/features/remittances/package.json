@@ -1,0 +1,48 @@
+{
+  "name": "@kit/remittances",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "clean": "git clean -xdf .turbo node_modules",
+    "format": "prettier --check \"**/*.{ts,tsx}\"",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
+  },
+  "exports": {
+    "./components": "./src/components/index.ts",
+    "./schema/*": "./src/schema/*.ts",
+    "./server/api": "./src/server/remittances.api.ts",
+    "./server/adjudicate-claim-action": "./src/server/adjudicate-claim.actions.ts",
+    "./server/match-eft-action": "./src/server/match-eft.actions.ts"
+  },
+  "devDependencies": {
+    "@kit/access-control": "workspace:*",
+    "@kit/eslint-config": "workspace:*",
+    "@kit/next": "workspace:*",
+    "@kit/prettier-config": "workspace:*",
+    "@kit/shared": "workspace:*",
+    "@kit/supabase": "workspace:*",
+    "@kit/tsconfig": "workspace:*",
+    "@kit/ui": "workspace:*",
+    "@supabase/supabase-js": "2.75.0",
+    "@tanstack/react-query": "5.90.2",
+    "@tanstack/react-table": "^8.21.3",
+    "@types/node": "^24.7.1",
+    "@types/react": "19.2.7",
+    "@types/react-dom": "19.2.3",
+    "next": "15.5.9",
+    "react": "19.2.1",
+    "react-dom": "19.2.1",
+    "sonner": "^2.0.7",
+    "worker": "workspace:*",
+    "zod": "^3.25.32"
+  },
+  "prettier": "@kit/prettier-config",
+  "typesVersions": {
+    "*": {
+      "*": [
+        "src/*"
+      ]
+    }
+  }
+}

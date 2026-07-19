@@ -130,6 +130,70 @@ export type Database = {
           },
         ]
       }
+      claim_adjustments: {
+        Row: {
+          adjustment_group: string
+          amount: number
+          carc_code: string
+          created_at: string | null
+          created_by: string | null
+          explanation: string
+          id: string
+          organization_id: string
+          rarc_code: string | null
+          remit_claim_id: string
+          rule_id: string | null
+        }
+        Insert: {
+          adjustment_group: string
+          amount: number
+          carc_code: string
+          created_at?: string | null
+          created_by?: string | null
+          explanation: string
+          id?: string
+          organization_id: string
+          rarc_code?: string | null
+          remit_claim_id: string
+          rule_id?: string | null
+        }
+        Update: {
+          adjustment_group?: string
+          amount?: number
+          carc_code?: string
+          created_at?: string | null
+          created_by?: string | null
+          explanation?: string
+          id?: string
+          organization_id?: string
+          rarc_code?: string | null
+          remit_claim_id?: string
+          rule_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "claim_adjustments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "claim_adjustments_remit_claim_id_fkey"
+            columns: ["remit_claim_id"]
+            isOneToOne: false
+            referencedRelation: "remit_claims"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "claim_adjustments_rule_id_fkey"
+            columns: ["rule_id"]
+            isOneToOne: false
+            referencedRelation: "payer_rules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       claim_batches: {
         Row: {
           batch_name: string | null
@@ -706,6 +770,54 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      eft_traces: {
+        Row: {
+          amount: number
+          created_at: string | null
+          created_by: string | null
+          effective_date: string
+          eft_trace_number: string
+          id: string
+          organization_id: string
+          remittance_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          created_by?: string | null
+          effective_date?: string
+          eft_trace_number?: string
+          id?: string
+          organization_id: string
+          remittance_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          created_by?: string | null
+          effective_date?: string
+          eft_trace_number?: string
+          id?: string
+          organization_id?: string
+          remittance_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "eft_traces_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eft_traces_remittance_id_fkey"
+            columns: ["remittance_id"]
+            isOneToOne: true
+            referencedRelation: "remittances"
             referencedColumns: ["id"]
           },
         ]
@@ -1483,6 +1595,58 @@ export type Database = {
         }
         Relationships: []
       }
+      payment_matches: {
+        Row: {
+          created_by: string | null
+          eft_trace_id: string
+          id: string
+          matched_amount: number
+          matched_at: string | null
+          organization_id: string
+          remittance_id: string
+        }
+        Insert: {
+          created_by?: string | null
+          eft_trace_id: string
+          id?: string
+          matched_amount: number
+          matched_at?: string | null
+          organization_id: string
+          remittance_id: string
+        }
+        Update: {
+          created_by?: string | null
+          eft_trace_id?: string
+          id?: string
+          matched_amount?: number
+          matched_at?: string | null
+          organization_id?: string
+          remittance_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_matches_eft_trace_id_fkey"
+            columns: ["eft_trace_id"]
+            isOneToOne: true
+            referencedRelation: "eft_traces"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_matches_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_matches_remittance_id_fkey"
+            columns: ["remittance_id"]
+            isOneToOne: false
+            referencedRelation: "remittances"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       permissions: {
         Row: {
           created_at: string | null
@@ -1671,6 +1835,201 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      remit_claims: {
+        Row: {
+          charge_amount: number
+          claim_id: string
+          created_at: string | null
+          created_by: string | null
+          id: string
+          organization_id: string
+          paid_amount: number
+          patient_responsibility: number
+          remittance_id: string
+        }
+        Insert: {
+          charge_amount: number
+          claim_id: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          organization_id: string
+          paid_amount?: number
+          patient_responsibility?: number
+          remittance_id: string
+        }
+        Update: {
+          charge_amount?: number
+          claim_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          organization_id?: string
+          paid_amount?: number
+          patient_responsibility?: number
+          remittance_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "remit_claims_claim_id_fkey"
+            columns: ["claim_id"]
+            isOneToOne: false
+            referencedRelation: "claims"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "remit_claims_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "remit_claims_remittance_id_fkey"
+            columns: ["remittance_id"]
+            isOneToOne: true
+            referencedRelation: "remittances"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      remit_service_lines: {
+        Row: {
+          charge_amount: number
+          claim_line_id: string | null
+          created_at: string | null
+          created_by: string | null
+          id: string
+          organization_id: string
+          paid_amount: number
+          remit_claim_id: string
+        }
+        Insert: {
+          charge_amount: number
+          claim_line_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          organization_id: string
+          paid_amount?: number
+          remit_claim_id: string
+        }
+        Update: {
+          charge_amount?: number
+          claim_line_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          organization_id?: string
+          paid_amount?: number
+          remit_claim_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "remit_service_lines_claim_line_id_fkey"
+            columns: ["claim_line_id"]
+            isOneToOne: false
+            referencedRelation: "claim_lines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "remit_service_lines_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "remit_service_lines_remit_claim_id_fkey"
+            columns: ["remit_claim_id"]
+            isOneToOne: false
+            referencedRelation: "remit_claims"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      remittances: {
+        Row: {
+          claim_id: string
+          created_at: string | null
+          created_by: string | null
+          gs06: string
+          id: string
+          isa13: string
+          organization_id: string
+          outcome: string
+          payer_id: string | null
+          payload_hash: string
+          raw_835_payload: string
+          sim_remittance_id: string
+          st02: string
+          status: string
+          total_paid_amount: number
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          claim_id: string
+          created_at?: string | null
+          created_by?: string | null
+          gs06: string
+          id?: string
+          isa13: string
+          organization_id: string
+          outcome: string
+          payer_id?: string | null
+          payload_hash: string
+          raw_835_payload: string
+          sim_remittance_id?: string
+          st02: string
+          status: string
+          total_paid_amount?: number
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          claim_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          gs06?: string
+          id?: string
+          isa13?: string
+          organization_id?: string
+          outcome?: string
+          payer_id?: string | null
+          payload_hash?: string
+          raw_835_payload?: string
+          sim_remittance_id?: string
+          st02?: string
+          status?: string
+          total_paid_amount?: number
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "remittances_claim_id_fkey"
+            columns: ["claim_id"]
+            isOneToOne: true
+            referencedRelation: "claims"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "remittances_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "remittances_payer_id_fkey"
+            columns: ["payer_id"]
+            isOneToOne: false
+            referencedRelation: "payers"
             referencedColumns: ["id"]
           },
         ]

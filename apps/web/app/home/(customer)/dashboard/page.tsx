@@ -1,3 +1,7 @@
+import { resolveCurrentOrganizationId } from '@kit/organizations/components';
+import { RejectionDenialRatesCard } from '@kit/remittances/components';
+import { createRemittancesApi } from '@kit/remittances/server/api';
+import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { PageBody, PageHeader } from '@kit/ui/page';
 import { Trans } from '@kit/ui/trans';
 
@@ -10,10 +14,23 @@ function DashboardPage() {
       <PageHeader description={<Trans i18nKey={'common:routes.dashboard'} />} />
 
       <PageBody>
-        <PlaceholderNotice />
+        <DashboardPageContent />
       </PageBody>
     </>
   );
+}
+
+async function DashboardPageContent() {
+  const { currentOrganizationId } = await resolveCurrentOrganizationId();
+
+  if (!currentOrganizationId) {
+    return <PlaceholderNotice />;
+  }
+
+  const client = getSupabaseServerClient();
+  const stats = await createRemittancesApi(client).getClaimOutcomeStats(currentOrganizationId);
+
+  return <RejectionDenialRatesCard stats={stats} />;
 }
 
 export default withI18n(DashboardPage);

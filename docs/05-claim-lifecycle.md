@@ -1,14 +1,14 @@
-# Claim Lifecycle (Phase 5–6)
+# Claim Lifecycle (Phase 5–7)
 
-> Simulation only. All claim data is synthetic (`SIM-` prefixed patients/providers/facilities/claim IDs), diagnosis and procedure codes are drawn from a small, clearly-labeled, non-exhaustive reference list — not a licensed ICD-10-CM/CPT/HCPCS code set. Generated X12/ack payloads are scoped and clearly labeled simulated, not production-conformant. Actual adjudication/835/denials are Phase 7 scope.
+> Simulation only. All claim data is synthetic (`SIM-` prefixed patients/providers/facilities/claim IDs), diagnosis and procedure codes are drawn from a small, clearly-labeled, non-exhaustive reference list — not a licensed ICD-10-CM/CPT/HCPCS code set. Generated X12/ack/835 payloads are scoped and clearly labeled simulated, not production-conformant. CARC/RARC codes on adjustments are `SIM-` prefixed and resolved from a small fixed map — never an asserted official X12 code meaning.
 
-## Scope: draft → validate → approve → submit → accepted for adjudication
+## Scope: draft → validate → approve → submit → accepted for adjudication → paid/denied
 
 `claims.status`:
 
-`draft → validation_failed | validated → approved → submitted → accepted_for_adjudication`
+`draft → validation_failed | validated → approved → submitted → accepted_for_adjudication → paid | denied`
 
-This is intentionally a coarse subset of the architecture's full state machine (`Draft → Validating → Validation Failed → Validated → EDI Generated → Submitted → TA1 → 999 → 277CA → Accepted for Adjudication → Adjudicating → Paid/Partially Paid/Denied → 835 Received → EFT Matched → Posted → Corrected/Resubmitted → Closed`). Notably, **TA1/999/277CA are not separate `claims.status` values** — they're `transaction_events`/`acknowledgments` rows (see below), which is what those tables exist for; adding six more claims.status values that a UI would need to special-case, when the trace already captures the same information at finer grain, would be exactly the kind of speculative design `CLAUDE.md` asks to avoid. The remaining lifecycle states (adjudication onward) are added when Phase 7 actually drives them — same deferral pattern as Phase 3's `payer_id`.
+This is intentionally a coarse subset of the architecture's full state machine (`Draft → Validating → Validation Failed → Validated → EDI Generated → Submitted → TA1 → 999 → 277CA → Accepted for Adjudication → Adjudicating → Paid/Partially Paid/Denied → 835 Received → EFT Matched → Posted → Corrected/Resubmitted → Closed`). Notably, **TA1/999/277CA/adjudicating/835-received/EFT-matched/posted are not separate `claims.status` values** — they're `transaction_events`/`acknowledgments` rows (see below), which is what those tables exist for; adding a dozen more `claims.status` values that a UI would need to special-case, when the trace already captures the same information at finer grain, would be exactly the kind of speculative design `CLAUDE.md` asks to avoid. `payment_matches`/`eft_matched`/`posted` progress is tracked on `remittances.status`, not `claims.status` — a claim is simply "paid" or "denied" from the claim's own point of view; the finer post-adjudication reconciliation states belong to the remittance, which is a separate record with its own lifecycle. Correction/resubmission and closure are later-phase scope, same deferral pattern as Phase 3's `payer_id`.
 
 ## The 837P / 837I subset (deliberate)
 
@@ -90,9 +90,42 @@ A duplicate submit of the same claim is detected by the `processing_jobs.claim_i
 
 `packages/features/transaction-trace` renders every `transaction_events` field for a claim, in order, on the claim detail page. Deliberately a separate package from `packages/features/edi` — later phases (remittance, Phase 7) will also write to the same `transaction_events` spine, not just the EDI pipeline.
 
+## Adjudication, remittance & reconciliation (Phase 7)
+
+Introduced by `apps/web/supabase/migrations/20260719050000_remittances.sql`. Adjudicating a claim already `accepted_for_adjudication` runs `apps/worker`'s `DeterministicClaimProcessor.adjudicate()` synchronously — see `docs/06-payer-rules.md` for the full `payer_test_profiles`/`payer_rules` wiring. Summary:
+
+1. Resolves the claim's payer via `coverage.payer_id`, then reads `payer_test_profiles.default_outcome` for that payer — the outcome is always a function of the claim's actual payer, never a hardcoded per-claim or per-payer-ID branch in code.
+2. **Paid:** applies a flat simulated 20% contractual write-off (`chargeAmount * 0.8` paid, the remainder one `CO`/`SIM-CARC-CO1` adjustment), generates a synthetic 835 payload + hash, inserts `remittances`/`remit_claims`/`remit_service_lines` (one row per `claim_lines` row, proportionally split) + one `eft_traces` row, and writes `adjudicating` → `835_received` → `paid` `transaction_events`.
+3. **Denied:** resolves the triggering rule via `payer_test_profiles.denial_rule_code → payer_rules.rule_code`, reads that rule's *live* `payer_rule_versions.explanation`/`field_path` (not a hardcoded message — same "DB is the content, code is the mechanism" pattern as Phase 5 validation), resolves a `SIM-` CARC/RARC pair from `field_path` via a small fixed map, inserts one `CO`-group `claim_adjustments` row for the full charge amount, and writes `adjudicating` → `835_received` → `denied` `transaction_events` (the `denied` event carries the triggering `rule_id`). **No `eft_traces` row is ever created for a denial** — there is no code path that could create one.
+4. Matching an EFT deposit (`ClaimProcessor.matchEft()`, paid remittances only) inserts `payment_matches` and writes `eft_matched` → `posted` `transaction_events`, moving `remittances.status` to `posted`.
+
+### Tables
+
+| Table | Purpose |
+|---|---|
+| `remittances` | One row per adjudicated claim (`claim_id` `UNIQUE` — the adjudication idempotency guarantee), the synthetic 835 raw payload + hash, `outcome`/`status`. |
+| `remit_claims` | Per-claim payment breakdown (charge/paid/patient-responsibility amounts). 1:1 with `remittances` in this MVP; modeled as a proper child table so a later phase batching multiple claims per 835 doesn't need a schema change. |
+| `remit_service_lines` | Per-line breakdown, one row per `claim_lines` row, proportionally split from the claim-level payment. |
+| `claim_adjustments` | CARC/RARC detail (`SIM-` prefixed, never an asserted official code meaning), linked to the triggering `payer_rules.id` for denials. |
+| `eft_traces` | Simulated EFT deposit trace. **Paid remittances only** — `remittance_id` `UNIQUE`. |
+| `payment_matches` | Reconciliation record linking an `eft_traces` row to its `remittances` row (`eft_trace_id` `UNIQUE` — the reconciliation idempotency guarantee). Insert gated on `remittances.post_payment`, deliberately distinct from `claims.approve_submit`. |
+
+### Idempotency
+
+Two independent guarantees, same first-write-wins pattern as Phase 6's `processing_jobs.claim_id`: a duplicate `adjudicate()` call fails on `remittances.claim_id`'s unique constraint before any other write; a duplicate `matchEft()` call fails on `payment_matches.eft_trace_id`'s unique constraint the same way. Both are proven at the DB level by `apps/web/supabase/tests/database/remittances-rls.test.sql`.
+
+### The rejection-vs-denial hard rule, enforced across two phases
+
+Phase 6 never writes an adjudication-stage `transaction_events` row; Phase 7 never writes a denial outcome to `processing_jobs`. The dashboard's rejection rate and denial rate are computed from two entirely separate queries — `processing_jobs` (rejection) and `remittances` (denial) — in `RemittancesApi.getClaimOutcomeStats`, so the two can never be accidentally merged into one "failure rate" in code. See `docs/progress/DECISIONS.md` Phase 7 for the full rationale.
+
+### The Remittances & Reconciliation UI
+
+`packages/features/remittances`: `/home/claims/[id]` gains an Adjudicate button (visible only when `status === 'accepted_for_adjudication'`) and, once adjudicated, a remittance detail panel (outcome badge, charge/paid/patient-responsibility, every adjustment row with its CARC/RARC + explanation, the EFT trace if paid, and a Match EFT action or a "Matched" badge). `/home/remittances` lists every remittance for the org with the same Match EFT action available from the list. `/home/dashboard` shows the rejection-rate and denial-rate cards side by side, each with its own numerator/denominator caption, never a combined metric.
+
 ## Not yet built (deferred, documented)
 
 - `claim_documents`/`claim_relationships`/`claim_batches` UI — schema and RLS exist since Phase 5; upload, correction/resubmission, and batch-management screens are later phases.
-- Adjudication, 835, denials, remittance — Phase 7. No adjudication-stage `transaction_events` row is ever written by Phase 6 — the rejection-vs-denial line is enforced by simply never crossing it here.
 - Editing claim header fields (patient/subscriber/coverage/provider/facility) after creation — only `notes` is editable via `PATCH /api/v1/claims/{id}`; changing the clinical/financial header is treated as a correction, which belongs to the (not-yet-built) `claim_relationships`-based workflow, not a silent in-place edit.
-- Full cross-statement transactionality for the submit pipeline — the idempotency guarantee (one `processing_jobs` row per claim, ever) is real and DB-enforced, but steps after it are sequential individually-committed writes, not one wrapped transaction. See `docs/02-architecture.md` and `docs/progress/DECISIONS.md`.
+- Full cross-statement transactionality for the submit and adjudication pipelines — the idempotency guarantees (one `processing_jobs` row per claim submission, one `remittances` row per claim adjudication, one `payment_matches` row per EFT trace, each ever) are real and DB-enforced, but steps after each first write are sequential individually-committed writes, not one wrapped transaction. See `docs/02-architecture.md` and `docs/progress/DECISIONS.md`.
+- Partial payment (`Paid`/`Partially Paid` are one architecture state in this simulator — `paid` always means the flat simulated 80% contractual allowance, never a partial/negotiated amount) and a real per-payer/per-procedure fee schedule — Phase 7 uses a single flat simulated allowance rate, not payer-specific allowed amounts. See `docs/progress/DECISIONS.md`.
+- Claim correction/resubmission after a denial — the denied remittance's "recommended next action" text points the user at the workflow, but the workflow itself (via `claim_relationships`) is not yet built.

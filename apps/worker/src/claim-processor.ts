@@ -8,7 +8,12 @@ import type { Database } from '@kit/supabase/database';
 
 import { generateControlNumbers } from './lib/control-numbers';
 import { sha256Hex } from './lib/hash';
-import { generate837Payload, generateAckPayload } from './lib/synthetic-x12';
+import {
+  CONTRACTUAL_ALLOWANCE_RATE,
+  CONTRACTUAL_ADJUSTMENT_CODE,
+  resolveDenialAdjustmentCode,
+} from './lib/simulated-adjustment-codes';
+import { generate835Payload, generate837Payload, generateAckPayload } from './lib/synthetic-x12';
 
 export interface ClaimProcessorContext {
   claimId: string;
@@ -24,19 +29,71 @@ export interface ClaimSubmissionResult {
   correlationId: string;
 }
 
+export interface AdjudicationContext {
+  claimId: string;
+  organizationId: string;
+  userId: string;
+}
+
+export interface AdjudicationResult {
+  outcome: 'processed' | 'duplicate_ignored';
+  claimStatus: string;
+  remittanceId: string | null;
+  correlationId: string;
+}
+
+export interface EftMatchContext {
+  remittanceId: string;
+  organizationId: string;
+  userId: string;
+}
+
+export interface EftMatchResult {
+  outcome: 'processed' | 'duplicate_ignored';
+  remittanceStatus: string;
+  paymentMatchId: string | null;
+  correlationId: string;
+}
+
 /**
  * The processing contract. Kept intentionally free of any Next.js/HTTP
- * concern so `process()` can move behind a durable queue later (a worker
- * process pulling jobs, not a request handler) without touching any
- * feature package -- see docs/05-claim-lifecycle.md and CLAUDE.md's API
- * design section. For the MVP, `submitClaimAction` (packages/features/edi)
- * calls this synchronously from the request path.
+ * concern so these methods can move behind a durable queue later (a
+ * worker process pulling jobs, not a request handler) without touching
+ * any feature package -- see docs/05-claim-lifecycle.md and CLAUDE.md's
+ * API design section. For the MVP, `submitClaimAction`/`adjudicateClaimAction`/
+ * `matchEftAction` (packages/features/edi, packages/features/remittances)
+ * call these synchronously from the request path.
  */
 export interface ClaimProcessor {
   process(
     client: SupabaseClient<Database>,
     context: ClaimProcessorContext,
   ): Promise<ClaimSubmissionResult>;
+  adjudicate(
+    client: SupabaseClient<Database>,
+    context: AdjudicationContext,
+  ): Promise<AdjudicationResult>;
+  matchEft(
+    client: SupabaseClient<Database>,
+    context: EftMatchContext,
+  ): Promise<EftMatchResult>;
+}
+
+interface TransactionEventFields {
+  eventName: string;
+  category: 'submission' | 'acknowledgment' | 'validation' | 'state_transition';
+  status: string;
+  code?: string | null;
+  explanation: string;
+  actorType: 'user' | 'system';
+  controlNumbers?: { isa13: string; gs06: string; st02: string } | null;
+  payerId?: string | null;
+  route?: string | null;
+  requestPayloadHash?: string | null;
+  responsePayloadHash?: string | null;
+  ediTransactionId?: string | null;
+  ruleId?: string | null;
+  nextRecommendedAction: string | null;
 }
 
 function inferRuleCategory(ruleCode: string): string {
@@ -67,7 +124,90 @@ function providerDisplayName(provider: {
   return provider.organization_name ?? `${provider.first_name} ${provider.last_name}`;
 }
 
+function randomSimId(prefix: string): string {
+  return `${prefix}-${crypto.randomUUID().replace(/-/g, '').slice(0, 8).toUpperCase()}`;
+}
+
 export class DeterministicClaimProcessor implements ClaimProcessor {
+  private async insertTransactionEvent(
+    client: SupabaseClient<Database>,
+    params: {
+      organizationId: string;
+      claimId: string;
+      batchId: string | null;
+      correlationId: string;
+      previousEventId: string | null;
+      userId: string;
+    } & TransactionEventFields,
+  ): Promise<string> {
+    const { data: event, error } = await client
+      .from('transaction_events')
+      .insert({
+        organization_id: params.organizationId,
+        claim_id: params.claimId,
+        batch_id: params.batchId,
+        edi_transaction_id: params.ediTransactionId ?? null,
+        event_name: params.eventName,
+        event_category: params.category,
+        actor_type: params.actorType,
+        actor_id: params.userId,
+        isa13: params.controlNumbers?.isa13 ?? null,
+        gs06: params.controlNumbers?.gs06 ?? null,
+        st02: params.controlNumbers?.st02 ?? null,
+        payer_id: params.payerId ?? null,
+        route: params.route ?? null,
+        request_payload_hash: params.requestPayloadHash ?? null,
+        response_payload_hash: params.responsePayloadHash ?? null,
+        status: params.status,
+        code: params.code ?? null,
+        explanation: params.explanation,
+        rule_id: params.ruleId ?? null,
+        correlation_id: params.correlationId,
+        previous_event_id: params.previousEventId,
+        next_recommended_action: params.nextRecommendedAction,
+        created_by: params.userId,
+      })
+      .select('id')
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+    return event.id;
+  }
+
+  private async resolvePayerContext(client: SupabaseClient<Database>, payerId: string | null) {
+    let payerName = 'SIM Unknown Payer';
+    let payerSimId = 'SIM-UNKNOWN';
+    let route: string | null = null;
+
+    if (payerId) {
+      const { data: payer } = await client
+        .from('payers')
+        .select('sim_payer_id, display_name')
+        .eq('id', payerId)
+        .maybeSingle();
+
+      if (payer) {
+        payerName = payer.display_name;
+        payerSimId = payer.sim_payer_id;
+      }
+
+      const { data: payerRoute } = await client
+        .from('payer_routes')
+        .select('route_name')
+        .eq('payer_id', payerId)
+        .eq('is_active', true)
+        .limit(1)
+        .maybeSingle();
+
+      route = payerRoute?.route_name ?? null;
+    }
+
+    return { payerName, payerSimId, route };
+  }
+
   async process(
     client: SupabaseClient<Database>,
     context: ClaimProcessorContext,
@@ -159,66 +299,27 @@ export class DeterministicClaimProcessor implements ClaimProcessor {
     }
 
     const failures = detailedResults.filter((result) => !result.passed);
-
     let previousEventId: string | null = null;
 
-    const insertEvent = async (fields: {
-      eventName: string;
-      category: 'submission' | 'acknowledgment' | 'validation' | 'state_transition';
-      status: string;
-      code?: string | null;
-      explanation: string;
-      actorType: 'user' | 'system';
-      controlNumbers?: { isa13: string; gs06: string; st02: string } | null;
-      payerId?: string | null;
-      route?: string | null;
-      requestPayloadHash?: string | null;
-      responsePayloadHash?: string | null;
-      ediTransactionId?: string | null;
-      nextRecommendedAction: string | null;
-    }) => {
-      const { data: event, error } = await client
-        .from('transaction_events')
-        .insert({
-          organization_id: context.organizationId,
-          claim_id: context.claimId,
-          batch_id: claim.batch_id,
-          edi_transaction_id: fields.ediTransactionId ?? null,
-          event_name: fields.eventName,
-          event_category: fields.category,
-          actor_type: fields.actorType,
-          actor_id: context.userId,
-          isa13: fields.controlNumbers?.isa13 ?? null,
-          gs06: fields.controlNumbers?.gs06 ?? null,
-          st02: fields.controlNumbers?.st02 ?? null,
-          payer_id: fields.payerId ?? null,
-          route: fields.route ?? null,
-          request_payload_hash: fields.requestPayloadHash ?? null,
-          response_payload_hash: fields.responsePayloadHash ?? null,
-          status: fields.status,
-          code: fields.code ?? null,
-          explanation: fields.explanation,
-          correlation_id: correlationId,
-          previous_event_id: previousEventId,
-          next_recommended_action: fields.nextRecommendedAction,
-          created_by: context.userId,
-        })
-        .select('id')
-        .single();
+    const emit = (fields: TransactionEventFields) =>
+      this.insertTransactionEvent(client, {
+        organizationId: context.organizationId,
+        claimId: context.claimId,
+        batchId: claim.batch_id,
+        correlationId,
+        previousEventId,
+        userId: context.userId,
+        ...fields,
+      }).then((id) => {
+        previousEventId = id;
 
-      if (error) {
-        throw error;
-      }
-
-      previousEventId = event.id;
-
-      return event.id;
-    };
+        return id;
+      });
 
     if (failures.length > 0) {
       const first = failures[0]!;
 
-      await insertEvent({
+      await emit({
         eventName: 'submission_rejected',
         category: 'validation',
         status: 'rejected',
@@ -253,35 +354,9 @@ export class DeterministicClaimProcessor implements ClaimProcessor {
 
     // Step 3: resolve payer + route (denormalized onto every event, since a
     // trace row should reflect what was true at the time, not a live join).
-    let payerId: string | null = null;
-    let payerName = 'SIM Unknown Payer';
-    let route: string | null = null;
-
-    if (claim.coverage) {
-      const coverage = Array.isArray(claim.coverage) ? claim.coverage[0] : claim.coverage;
-
-      if (coverage?.payer_id) {
-        payerId = coverage.payer_id;
-
-        const { data: payer } = await client
-          .from('payers')
-          .select('display_name')
-          .eq('id', coverage.payer_id)
-          .maybeSingle();
-
-        payerName = payer?.display_name ?? payerName;
-
-        const { data: payerRoute } = await client
-          .from('payer_routes')
-          .select('route_name')
-          .eq('payer_id', coverage.payer_id)
-          .eq('is_active', true)
-          .limit(1)
-          .maybeSingle();
-
-        route = payerRoute?.route_name ?? null;
-      }
-    }
+    const coverage = Array.isArray(claim.coverage) ? claim.coverage[0] : claim.coverage;
+    const payerId = coverage?.payer_id ?? null;
+    const { payerName, route } = await this.resolvePayerContext(client, payerId);
 
     // Step 4: fetch full display data (names, NPIs, diagnoses, lines) --
     // loadClaimValidationContext only fetches what rule evaluation needs.
@@ -403,7 +478,7 @@ export class DeterministicClaimProcessor implements ClaimProcessor {
       throw submittedError;
     }
 
-    await insertEvent({
+    await emit({
       eventName: 'claim_submitted',
       category: 'submission',
       status: 'submitted',
@@ -414,7 +489,7 @@ export class DeterministicClaimProcessor implements ClaimProcessor {
       nextRecommendedAction: 'Awaiting EDI generation.',
     });
 
-    await insertEvent({
+    await emit({
       eventName: 'edi_generated',
       category: 'submission',
       status: 'submitted',
@@ -437,7 +512,7 @@ export class DeterministicClaimProcessor implements ClaimProcessor {
       {
         type: '277CA',
         eventName: '277ca_received',
-        next: 'Awaiting payer adjudication (Phase 7 scope).',
+        next: 'Awaiting payer adjudication.',
       },
     ];
 
@@ -468,7 +543,7 @@ export class DeterministicClaimProcessor implements ClaimProcessor {
         created_by: context.userId,
       });
 
-      await insertEvent({
+      await emit({
         eventName: ack.eventName,
         category: 'acknowledgment',
         status: 'accepted',
@@ -493,7 +568,7 @@ export class DeterministicClaimProcessor implements ClaimProcessor {
       throw acceptedError;
     }
 
-    await insertEvent({
+    await emit({
       eventName: 'accepted_for_adjudication',
       category: 'state_transition',
       status: 'accepted_for_adjudication',
@@ -502,8 +577,7 @@ export class DeterministicClaimProcessor implements ClaimProcessor {
       payerId,
       route,
       ediTransactionId: ediTransaction.id,
-      nextRecommendedAction:
-        "None -- claim is now in the payer's adjudication queue (Phase 7 scope).",
+      nextRecommendedAction: 'Ready to adjudicate.',
     });
 
     await client
@@ -519,6 +593,482 @@ export class DeterministicClaimProcessor implements ClaimProcessor {
       outcome: 'processed',
       claimStatus: 'accepted_for_adjudication',
       processingJobId: job.id,
+      correlationId,
+    };
+  }
+
+  /**
+   * Adjudicates a claim already accepted_for_adjudication. The outcome is
+   * a deterministic function of the claim's actual payer (via
+   * coverage.payer_id) and that payer's payer_test_profiles row -- never
+   * a per-claim-ID or per-payer-ID branch in this code. Idempotency is
+   * guarded by remittances.claim_id being UNIQUE (a distinct guard from
+   * processing_jobs, which covers submission specifically).
+   */
+  async adjudicate(
+    client: SupabaseClient<Database>,
+    context: AdjudicationContext,
+  ): Promise<AdjudicationResult> {
+    const correlationId = crypto.randomUUID();
+
+    const { data: claim, error: claimError } = await client
+      .from('claims')
+      .select(
+        `id, organization_id, batch_id, sim_claim_id, status,
+         coverage:coverages(payer_id),
+         patient:patients(first_name, last_name),
+         lines:claim_lines(id, charge_amount)`,
+      )
+      .eq('id', context.claimId)
+      .single();
+
+    if (claimError) {
+      throw claimError;
+    }
+
+    if (claim.status !== 'accepted_for_adjudication') {
+      throw new Error(
+        'Only a claim accepted for adjudication can be adjudicated -- submit it first.',
+      );
+    }
+
+    const coverage = Array.isArray(claim.coverage) ? claim.coverage[0] : claim.coverage;
+    const patient = Array.isArray(claim.patient) ? claim.patient[0] : claim.patient;
+    const payerId = coverage?.payer_id ?? null;
+    const { payerName, payerSimId, route } = await this.resolvePayerContext(client, payerId);
+
+    let defaultOutcome: 'paid' | 'denied' = 'paid';
+    let denialRuleCode: string | null = null;
+
+    if (payerId) {
+      const { data: profile } = await client
+        .from('payer_test_profiles')
+        .select('default_outcome, denial_rule_code')
+        .eq('payer_id', payerId)
+        .maybeSingle();
+
+      if (profile?.default_outcome === 'denied') {
+        defaultOutcome = 'denied';
+        denialRuleCode = profile.denial_rule_code;
+      }
+    }
+
+    const chargeAmount = (claim.lines ?? []).reduce(
+      (sum, line) => sum + Number(line.charge_amount),
+      0,
+    );
+
+    let paidAmount = 0;
+    const patientResponsibility = 0;
+    let triggeringRuleId: string | null = null;
+    let outcomeExplanation: string;
+    let nextRecommendedAction: string;
+
+    const adjustments: {
+      group: 'CO' | 'PR' | 'OA' | 'PI';
+      carcCode: string;
+      rarcCode: string | null;
+      amount: number;
+      explanation: string;
+      ruleId: string | null;
+    }[] = [];
+
+    if (defaultOutcome === 'paid') {
+      paidAmount = Math.round(chargeAmount * CONTRACTUAL_ALLOWANCE_RATE * 100) / 100;
+      const adjustmentAmount = Math.round((chargeAmount - paidAmount) * 100) / 100;
+
+      adjustments.push({
+        group: 'CO',
+        carcCode: CONTRACTUAL_ADJUSTMENT_CODE.carcCode,
+        rarcCode: CONTRACTUAL_ADJUSTMENT_CODE.rarcCode,
+        amount: adjustmentAmount,
+        explanation: CONTRACTUAL_ADJUSTMENT_CODE.label,
+        ruleId: null,
+      });
+
+      outcomeExplanation = `Claim paid: $${paidAmount.toFixed(2)} of $${chargeAmount.toFixed(2)} billed (simulated ${(CONTRACTUAL_ALLOWANCE_RATE * 100).toFixed(0)}% contractual allowance).`;
+      nextRecommendedAction = 'Await EFT deposit, then match and post the payment.';
+    } else {
+      let fieldPath: string | null = null;
+      outcomeExplanation = 'Claim denied.';
+
+      if (denialRuleCode) {
+        const { data: rule } = await client
+          .from('payer_rules')
+          .select('id, versions:payer_rule_versions(*)')
+          .eq('rule_code', denialRuleCode)
+          .maybeSingle();
+
+        if (rule) {
+          triggeringRuleId = rule.id;
+
+          const latestVersion = [...(rule.versions ?? [])]
+            .filter((version) => version.is_active)
+            .sort((a, b) => b.version_number - a.version_number)[0];
+
+          if (latestVersion) {
+            outcomeExplanation = latestVersion.explanation;
+            fieldPath = latestVersion.field_path;
+          }
+        }
+      }
+
+      const code = resolveDenialAdjustmentCode(fieldPath);
+
+      adjustments.push({
+        group: 'CO',
+        carcCode: code.carcCode,
+        rarcCode: code.rarcCode,
+        amount: chargeAmount,
+        explanation: outcomeExplanation,
+        ruleId: triggeringRuleId,
+      });
+
+      nextRecommendedAction =
+        'Review the denial reason; correct and resubmit if the underlying issue can be fixed.';
+    }
+
+    const controlNumbers = generateControlNumbers();
+    const simRemittanceId = randomSimId('SIM-ERA');
+
+    const payload835 = generate835Payload({
+      simClaimId: claim.sim_claim_id,
+      simRemittanceId,
+      controlNumbers,
+      payerName,
+      payerSimId,
+      patientName: patient ? `${patient.first_name} ${patient.last_name}` : 'SIM Unknown Patient',
+      chargeAmount,
+      paidAmount,
+      patientResponsibility,
+      outcome: defaultOutcome,
+      adjustments: adjustments.map((a) => ({
+        group: a.group,
+        carcCode: a.carcCode,
+        amount: a.amount,
+      })),
+    });
+
+    const payloadHash = sha256Hex(payload835);
+
+    // Idempotency: remittances.claim_id is UNIQUE. A duplicate adjudicate
+    // attempt fails this insert before any other write happens.
+    const { data: remittance, error: remitError } = await client
+      .from('remittances')
+      .insert({
+        organization_id: context.organizationId,
+        claim_id: context.claimId,
+        payer_id: payerId,
+        sim_remittance_id: simRemittanceId,
+        isa13: controlNumbers.isa13,
+        gs06: controlNumbers.gs06,
+        st02: controlNumbers.st02,
+        raw_835_payload: payload835,
+        payload_hash: payloadHash,
+        total_paid_amount: paidAmount,
+        outcome: defaultOutcome,
+        status: defaultOutcome,
+        created_by: context.userId,
+      })
+      .select('id')
+      .single();
+
+    if (remitError) {
+      if (remitError.code === '23505') {
+        const { data: existing } = await client
+          .from('remittances')
+          .select('id')
+          .eq('claim_id', context.claimId)
+          .maybeSingle();
+
+        return {
+          outcome: 'duplicate_ignored',
+          claimStatus: claim.status,
+          remittanceId: existing?.id ?? null,
+          correlationId,
+        };
+      }
+
+      throw remitError;
+    }
+
+    const { data: remitClaim, error: remitClaimError } = await client
+      .from('remit_claims')
+      .insert({
+        organization_id: context.organizationId,
+        remittance_id: remittance.id,
+        claim_id: context.claimId,
+        charge_amount: chargeAmount,
+        paid_amount: paidAmount,
+        patient_responsibility: patientResponsibility,
+        created_by: context.userId,
+      })
+      .select('id')
+      .single();
+
+    if (remitClaimError) {
+      throw remitClaimError;
+    }
+
+    const serviceLines = claim.lines ?? [];
+
+    if (serviceLines.length > 0) {
+      const { error: serviceLineError } = await client.from('remit_service_lines').insert(
+        serviceLines.map((line) => {
+          const lineCharge = Number(line.charge_amount);
+          const linePaid =
+            defaultOutcome === 'paid'
+              ? Math.round(lineCharge * CONTRACTUAL_ALLOWANCE_RATE * 100) / 100
+              : 0;
+
+          return {
+            organization_id: context.organizationId,
+            remit_claim_id: remitClaim.id,
+            claim_line_id: line.id,
+            charge_amount: lineCharge,
+            paid_amount: linePaid,
+            created_by: context.userId,
+          };
+        }),
+      );
+
+      if (serviceLineError) {
+        throw serviceLineError;
+      }
+    }
+
+    const { error: adjustmentError } = await client.from('claim_adjustments').insert(
+      adjustments.map((a) => ({
+        organization_id: context.organizationId,
+        remit_claim_id: remitClaim.id,
+        adjustment_group: a.group,
+        carc_code: a.carcCode,
+        rarc_code: a.rarcCode,
+        amount: a.amount,
+        explanation: a.explanation,
+        rule_id: a.ruleId,
+        created_by: context.userId,
+      })),
+    );
+
+    if (adjustmentError) {
+      throw adjustmentError;
+    }
+
+    let previousEventId: string | null = null;
+
+    const emit = (fields: TransactionEventFields) =>
+      this.insertTransactionEvent(client, {
+        organizationId: context.organizationId,
+        claimId: context.claimId,
+        batchId: claim.batch_id,
+        correlationId,
+        previousEventId,
+        userId: context.userId,
+        ...fields,
+      }).then((id) => {
+        previousEventId = id;
+
+        return id;
+      });
+
+    await emit({
+      eventName: 'adjudicating',
+      category: 'state_transition',
+      status: 'adjudicating',
+      explanation: 'Claim submitted to payer for adjudication.',
+      actorType: 'system',
+      payerId,
+      route,
+      nextRecommendedAction: 'Awaiting 835 remittance advice.',
+    });
+
+    await emit({
+      eventName: '835_received',
+      category: 'acknowledgment',
+      status: defaultOutcome,
+      code: defaultOutcome === 'paid' ? '835-PAID' : '835-DENIED',
+      explanation: `Simulated 835 remittance advice received: ${defaultOutcome}.`,
+      actorType: 'system',
+      controlNumbers,
+      payerId,
+      route,
+      responsePayloadHash: payloadHash,
+      nextRecommendedAction:
+        defaultOutcome === 'paid'
+          ? 'Awaiting EFT deposit and reconciliation.'
+          : 'Review denial reason and determine next action.',
+    });
+
+    const { error: outcomeError } = await client
+      .from('claims')
+      .update({ status: defaultOutcome, updated_by: context.userId })
+      .eq('id', context.claimId);
+
+    if (outcomeError) {
+      throw outcomeError;
+    }
+
+    await emit({
+      eventName: defaultOutcome,
+      category: 'state_transition',
+      status: defaultOutcome,
+      code: defaultOutcome === 'denied' ? adjustments[0]?.carcCode ?? null : null,
+      explanation: outcomeExplanation,
+      actorType: 'system',
+      payerId,
+      route,
+      ruleId: triggeringRuleId,
+      nextRecommendedAction,
+    });
+
+    if (defaultOutcome === 'paid') {
+      const { error: eftError } = await client.from('eft_traces').insert({
+        organization_id: context.organizationId,
+        remittance_id: remittance.id,
+        eft_trace_number: randomSimId('SIM-EFT'),
+        amount: paidAmount,
+        created_by: context.userId,
+      });
+
+      if (eftError) {
+        throw eftError;
+      }
+    }
+
+    return {
+      outcome: 'processed',
+      claimStatus: defaultOutcome,
+      remittanceId: remittance.id,
+      correlationId,
+    };
+  }
+
+  /**
+   * The explicit reconciliation step: matches a paid remittance's
+   * simulated EFT deposit and posts it. Never runs automatically during
+   * adjudication. Idempotency guarded by payment_matches.eft_trace_id
+   * being UNIQUE.
+   */
+  async matchEft(
+    client: SupabaseClient<Database>,
+    context: EftMatchContext,
+  ): Promise<EftMatchResult> {
+    const correlationId = crypto.randomUUID();
+
+    const { data: remittance, error: remittanceError } = await client
+      .from('remittances')
+      .select('id, claim_id, outcome, status, total_paid_amount')
+      .eq('id', context.remittanceId)
+      .single();
+
+    if (remittanceError) {
+      throw remittanceError;
+    }
+
+    if (remittance.outcome !== 'paid') {
+      throw new Error('Only a paid remittance can be matched to an EFT deposit.');
+    }
+
+    const { data: eftTrace, error: eftFetchError } = await client
+      .from('eft_traces')
+      .select('id, amount')
+      .eq('remittance_id', context.remittanceId)
+      .single();
+
+    if (eftFetchError) {
+      throw eftFetchError;
+    }
+
+    const { data: claim, error: claimError } = await client
+      .from('claims')
+      .select('id, batch_id, coverage:coverages(payer_id)')
+      .eq('id', remittance.claim_id)
+      .single();
+
+    if (claimError) {
+      throw claimError;
+    }
+
+    const coverage = Array.isArray(claim.coverage) ? claim.coverage[0] : claim.coverage;
+    const { route } = await this.resolvePayerContext(client, coverage?.payer_id ?? null);
+
+    // Idempotency: payment_matches.eft_trace_id is UNIQUE.
+    const { data: match, error: matchError } = await client
+      .from('payment_matches')
+      .insert({
+        organization_id: context.organizationId,
+        eft_trace_id: eftTrace.id,
+        remittance_id: context.remittanceId,
+        matched_amount: eftTrace.amount,
+        created_by: context.userId,
+      })
+      .select('id')
+      .single();
+
+    if (matchError) {
+      if (matchError.code === '23505') {
+        return {
+          outcome: 'duplicate_ignored',
+          remittanceStatus: remittance.status,
+          paymentMatchId: null,
+          correlationId,
+        };
+      }
+
+      throw matchError;
+    }
+
+    let previousEventId: string | null = null;
+
+    const emit = (fields: TransactionEventFields) =>
+      this.insertTransactionEvent(client, {
+        organizationId: context.organizationId,
+        claimId: remittance.claim_id,
+        batchId: claim.batch_id,
+        correlationId,
+        previousEventId,
+        userId: context.userId,
+        ...fields,
+      }).then((id) => {
+        previousEventId = id;
+
+        return id;
+      });
+
+    await emit({
+      eventName: 'eft_matched',
+      category: 'state_transition',
+      status: 'eft_matched',
+      explanation: `Simulated EFT deposit of $${Number(eftTrace.amount).toFixed(2)} matched to remittance.`,
+      actorType: 'user',
+      route,
+      nextRecommendedAction: 'Post the matched payment.',
+    });
+
+    await emit({
+      eventName: 'posted',
+      category: 'state_transition',
+      status: 'posted',
+      explanation: 'Matched payment posted.',
+      actorType: 'system',
+      route,
+      nextRecommendedAction: 'None -- claim payment fully reconciled.',
+    });
+
+    const { error: statusError } = await client
+      .from('remittances')
+      .update({ status: 'posted', updated_by: context.userId })
+      .eq('id', context.remittanceId);
+
+    if (statusError) {
+      throw statusError;
+    }
+
+    return {
+      outcome: 'processed',
+      remittanceStatus: 'posted',
+      paymentMatchId: match.id,
       correlationId,
     };
   }

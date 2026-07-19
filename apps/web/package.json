@@ -44,6 +44,7 @@
     "@kit/organizations": "workspace:*",
     "@kit/payer-rules": "workspace:*",
     "@kit/payers": "workspace:*",
+    "@kit/remittances": "workspace:*",
     "@kit/supabase": "workspace:*",
     "@kit/transaction-trace": "workspace:*",
     "@kit/ui": "workspace:*",
