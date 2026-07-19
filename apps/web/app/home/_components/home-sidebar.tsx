@@ -1,5 +1,6 @@
 import type { JwtPayload } from '@supabase/supabase-js';
 
+import { OrganizationSwitcherContainer } from '@kit/organizations/components';
 import {
   Sidebar,
   SidebarContent,
@@ -19,12 +20,14 @@ export function HomeSidebar(props: {
 }) {
   return (
     <Sidebar collapsible={'icon'}>
-      <SidebarHeader className={'h-16 justify-center'}>
-        <div className={'flex items-center justify-between space-x-2'}>
+      <SidebarHeader className={'justify-center'}>
+        <div className={'flex h-16 items-center justify-between space-x-2'}>
           <div>
             <AppLogo className={'max-w-full'} />
           </div>
         </div>
+
+        <OrganizationSwitcherContainer />
       </SidebarHeader>
 
       <SidebarContent>

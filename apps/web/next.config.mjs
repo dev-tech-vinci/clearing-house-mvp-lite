@@ -6,6 +6,8 @@ const INTERNAL_PACKAGES = [
   '@kit/ui',
   '@kit/auth',
   '@kit/accounts',
+  '@kit/access-control',
+  '@kit/organizations',
   '@kit/shared',
   '@kit/supabase',
   '@kit/i18n',
@@ -15,6 +17,13 @@ const INTERNAL_PACKAGES = [
 /** @type {import('next').NextConfig} */
 const config = {
   reactStrictMode: true,
+  /**
+   * Disables the floating "Open Next.js Dev Tools" button. It intercepts
+   * pointer events over whatever it overlaps (e.g. the account/profile
+   * menu trigger in the sidebar footer), causing intermittent Playwright
+   * click failures against `next dev` -- see docs/progress/KNOWN_ISSUES.md.
+   */
+  devIndicators: false,
   /** Enables hot reloading for local packages without a build step */
   transpilePackages: INTERNAL_PACKAGES,
   images: {

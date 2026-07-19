@@ -1,0 +1,36 @@
+{
+  "name": "@kit/access-control",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "clean": "git clean -xdf .turbo node_modules",
+    "format": "prettier --check \"**/*.{ts,tsx}\"",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
+  },
+  "exports": {
+    "./roles": "./src/roles.ts",
+    "./permissions": "./src/permissions.ts",
+    "./server": "./src/server/has-permission.ts",
+    "./hooks/*": "./src/hooks/*.ts"
+  },
+  "devDependencies": {
+    "@kit/eslint-config": "workspace:*",
+    "@kit/prettier-config": "workspace:*",
+    "@kit/supabase": "workspace:*",
+    "@kit/tsconfig": "workspace:*",
+    "@supabase/supabase-js": "2.75.0",
+    "@tanstack/react-query": "5.90.2",
+    "@types/node": "^24.7.1",
+    "@types/react": "19.2.7",
+    "react": "19.2.1"
+  },
+  "prettier": "@kit/prettier-config",
+  "typesVersions": {
+    "*": {
+      "*": [
+        "src/*"
+      ]
+    }
+  }
+}

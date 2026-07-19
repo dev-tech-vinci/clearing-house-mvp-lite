@@ -33,10 +33,12 @@
   "dependencies": {
     "@edge-csrf/nextjs": "2.5.3-cloudflare-rc1",
     "@hookform/resolvers": "^5.2.2",
+    "@kit/access-control": "workspace:*",
     "@kit/accounts": "workspace:*",
     "@kit/auth": "workspace:*",
     "@kit/i18n": "workspace:*",
     "@kit/next": "workspace:*",
+    "@kit/organizations": "workspace:*",
     "@kit/supabase": "workspace:*",
     "@kit/ui": "workspace:*",
     "@makerkit/data-loader-supabase-core": "^0.0.10",
