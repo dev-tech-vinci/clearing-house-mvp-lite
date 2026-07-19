@@ -114,6 +114,29 @@ Introduced by `apps/web/supabase/migrations/20260719040000_edi.sql`. Org-owned, 
 
 Same trigger pattern as Phase 3/5: the existing `kit.check_claim_child_org_consistency()` (keyed on `claim_id`) is reused for `processing_jobs`/`edi_transactions`/`rule_evaluations`/`replay_attempts`/`transaction_events`; a new analogous `kit.check_edi_transaction_child_org_consistency()` (keyed on `edi_transaction_id`) covers `edi_payloads`/`acknowledgments`.
 
-## Future entity groups (not yet built)
+Remittance (Phase 7) is documented in full in `docs/05-claim-lifecycle.md`'s "Adjudication, remittance & reconciliation" section, not repeated here.
 
-Remittance (Phase 7) · Support/docs (Phase 8) · Governance/audit (Phase 8). See `data-model-erd.mmd` for the abridged target ERD across all phases.
+## Support, documents & governance (Phase 8)
+
+Introduced by `apps/web/supabase/migrations/20260719060000_support_documents_audit.sql`. Org-owned, tenancy contract. Full detail (the no-silent-impersonation session mechanism, ticket-scoping, document privacy): `docs/04-rbac-and-rls.md`.
+
+| Table | Purpose |
+|---|---|
+| `support_tickets` | Customer-opened tickets (`sim_ticket_id`, `subject`/`description`, `status`, `priority`, `assigned_to`). |
+| `support_messages` | Ticket correspondence; `is_internal_note` rows are support-only, never customer-visible. |
+| `support_assignments` | Support-internal assignment history (not customer-visible — the ticket's own `assigned_to` is the customer-facing signal). |
+| `support_ticket_documents` | Join table linking a ticket to a `documents` row (attachment). Two parent FKs (`ticket_id`, `document_id`), each with its own cross-org-consistency trigger. |
+| `documents` | The real, generic, privately-stored document registry (Phase 5's `claim_documents` stays metadata-only and untouched — this is a separate, new table). `storage_path` points into the private `org_documents` Storage bucket; optional nullable `claim_id`. |
+| `document_access_events` | Logs every view/download (`access_type`, `accessed_by`, and the `support_access_session_id` if accessed during a session). |
+| `support_access_sessions` | The no-silent-impersonation core — see `docs/04-rbac-and-rls.md` for the full mechanism (assigned-ticket requirement, typed reason, time limit, read-only-by-construction, customer-visible history). |
+| `audit_events` | Append-only (`INSERT` policy only, no `UPDATE`/`DELETE` grant — same proven pattern as `transaction_events`). Generated explicitly (no trigger-based auto-instrumentation) for role changes, support session start/end, document access, and claim approval/submission. |
+
+### Cross-org FK-consistency
+
+Two new generic trigger functions extend the Phase 3/5/7 pattern: `kit.check_support_ticket_child_org_consistency()` (keyed on `ticket_id`, covers `support_assignments`/`support_messages`/`support_ticket_documents`/`support_access_sessions`) and `kit.check_document_child_org_consistency()` (keyed on `document_id`, covers `support_ticket_documents`/`document_access_events`). `support_ticket_documents` — like Phase 7's `remit_claims` before it — has two parent FKs and needs both triggers. A third, `kit.check_nullable_claim_org_consistency()`, generalizes Phase 5's `kit.check_claim_child_org_consistency()` for the two tables (`support_tickets`, `documents`) whose `claim_id` is optional rather than required — the original function raises on a null `claim_id` instead of skipping the check, so it could not be reused as-is.
+
+### New access-control primitives
+
+`has_role(role_key)` and `has_platform_permission(permission_key)` generalize Phase 4's `is_platform_admin()` pattern (role-membership checks not scoped to a specific target organization) to any role/permission key. `has_active_support_session(target_org_id)` is the session-gated bypass itself. All three, and their exact use, are documented in `docs/04-rbac-and-rls.md`.
+
+See `data-model-erd.mmd` for the abridged target ERD across all phases.

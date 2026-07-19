@@ -16,6 +16,7 @@
   },
   "devDependencies": {
     "@kit/access-control": "workspace:*",
+    "@kit/audit": "workspace:*",
     "@kit/claims": "workspace:*",
     "@kit/eslint-config": "workspace:*",
     "@kit/next": "workspace:*",

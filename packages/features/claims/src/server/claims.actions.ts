@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 
+import { logAuditEvent } from '@kit/audit/server/log-audit-event';
 import { enhanceAction } from '@kit/next/actions';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
@@ -129,7 +130,7 @@ export const approveClaimAction = enhanceAction(
       })
       .eq('id', data.claimId)
       .eq('status', 'validated')
-      .select('id')
+      .select('id, organization_id')
       .maybeSingle();
 
     if (error) {
@@ -141,6 +142,14 @@ export const approveClaimAction = enhanceAction(
         'Claim could not be approved -- it must be validated first, or you may not have the claims.approve_submit permission.',
       );
     }
+
+    await logAuditEvent(client, {
+      organizationId: updated.organization_id,
+      actorId: user.id,
+      action: 'claim.approved',
+      targetType: 'claim',
+      targetId: updated.id,
+    });
 
     revalidatePath(`/home/claims/${data.claimId}`);
     revalidatePath('/home/claims');

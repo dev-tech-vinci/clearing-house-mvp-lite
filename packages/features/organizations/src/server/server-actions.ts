@@ -3,6 +3,7 @@
 import { cookies } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 
+import { logAuditEvent } from '@kit/audit/server/log-audit-event';
 import { enhanceAction } from '@kit/next/actions';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
@@ -143,6 +144,16 @@ export const updateMemberRoleAction = enhanceAction(
       throw roleError;
     }
 
+    const { data: previous, error: previousError } = await client
+      .from('organization_memberships')
+      .select('organization_id, user_id, role:roles(key)')
+      .eq('id', data.membershipId)
+      .single();
+
+    if (previousError) {
+      throw previousError;
+    }
+
     const { error } = await client
       .from('organization_memberships')
       .update({ role_id: role.id, updated_by: user.id })
@@ -151,6 +162,19 @@ export const updateMemberRoleAction = enhanceAction(
     if (error) {
       throw error;
     }
+
+    await logAuditEvent(client, {
+      organizationId: previous.organization_id,
+      actorId: user.id,
+      action: 'member.role_changed',
+      targetType: 'organization_membership',
+      targetId: data.membershipId,
+      metadata: {
+        memberUserId: previous.user_id,
+        fromRole: previous.role?.key ?? null,
+        toRole: data.roleKey,
+      },
+    });
 
     revalidatePath('/home/users');
 

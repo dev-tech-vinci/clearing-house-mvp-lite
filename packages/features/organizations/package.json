@@ -19,6 +19,7 @@
   "devDependencies": {
     "@hookform/resolvers": "^5.2.2",
     "@kit/access-control": "workspace:*",
+    "@kit/audit": "workspace:*",
     "@kit/eslint-config": "workspace:*",
     "@kit/next": "workspace:*",
     "@kit/prettier-config": "workspace:*",

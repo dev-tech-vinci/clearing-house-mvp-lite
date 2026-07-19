@@ -130,6 +130,50 @@ export type Database = {
           },
         ]
       }
+      audit_events: {
+        Row: {
+          action: string
+          actor_id: string | null
+          correlation_id: string | null
+          created_at: string | null
+          id: string
+          metadata: Json
+          organization_id: string
+          target_id: string | null
+          target_type: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          correlation_id?: string | null
+          created_at?: string | null
+          id?: string
+          metadata?: Json
+          organization_id: string
+          target_id?: string | null
+          target_type?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          correlation_id?: string | null
+          created_at?: string | null
+          id?: string
+          metadata?: Json
+          organization_id?: string
+          target_id?: string | null
+          target_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       claim_adjustments: {
         Row: {
           adjustment_group: string
@@ -658,6 +702,121 @@ export type Database = {
             columns: ["subscriber_id"]
             isOneToOne: false
             referencedRelation: "subscribers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      document_access_events: {
+        Row: {
+          access_type: string
+          accessed_by: string | null
+          created_at: string | null
+          document_id: string
+          id: string
+          organization_id: string
+          support_access_session_id: string | null
+        }
+        Insert: {
+          access_type: string
+          accessed_by?: string | null
+          created_at?: string | null
+          document_id: string
+          id?: string
+          organization_id: string
+          support_access_session_id?: string | null
+        }
+        Update: {
+          access_type?: string
+          accessed_by?: string | null
+          created_at?: string | null
+          document_id?: string
+          id?: string
+          organization_id?: string
+          support_access_session_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_access_events_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_access_events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_access_events_support_access_session_id_fkey"
+            columns: ["support_access_session_id"]
+            isOneToOne: false
+            referencedRelation: "support_access_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      documents: {
+        Row: {
+          claim_id: string | null
+          created_at: string | null
+          created_by: string | null
+          deleted_at: string | null
+          file_name: string
+          file_size_bytes: number
+          id: string
+          mime_type: string
+          organization_id: string
+          sim_document_id: string
+          storage_path: string
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          claim_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          deleted_at?: string | null
+          file_name: string
+          file_size_bytes: number
+          id?: string
+          mime_type: string
+          organization_id: string
+          sim_document_id?: string
+          storage_path: string
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          claim_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          deleted_at?: string | null
+          file_name?: string
+          file_size_bytes?: number
+          id?: string
+          mime_type?: string
+          organization_id?: string
+          sim_document_id?: string
+          storage_path?: string
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documents_claim_id_fkey"
+            columns: ["claim_id"]
+            isOneToOne: false
+            referencedRelation: "claims"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documents_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
@@ -2282,6 +2441,274 @@ export type Database = {
           },
         ]
       }
+      support_access_sessions: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          ended_at: string | null
+          ended_by: string | null
+          expires_at: string
+          granted_scope: string[]
+          id: string
+          organization_id: string
+          reason: string
+          started_at: string
+          support_user_id: string
+          ticket_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          ended_at?: string | null
+          ended_by?: string | null
+          expires_at: string
+          granted_scope?: string[]
+          id?: string
+          organization_id: string
+          reason: string
+          started_at?: string
+          support_user_id: string
+          ticket_id: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          ended_at?: string | null
+          ended_by?: string | null
+          expires_at?: string
+          granted_scope?: string[]
+          id?: string
+          organization_id?: string
+          reason?: string
+          started_at?: string
+          support_user_id?: string
+          ticket_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_access_sessions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_access_sessions_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "support_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      support_assignments: {
+        Row: {
+          assigned_at: string | null
+          assigned_by: string | null
+          id: string
+          organization_id: string
+          support_user_id: string
+          ticket_id: string
+          unassigned_at: string | null
+        }
+        Insert: {
+          assigned_at?: string | null
+          assigned_by?: string | null
+          id?: string
+          organization_id: string
+          support_user_id: string
+          ticket_id: string
+          unassigned_at?: string | null
+        }
+        Update: {
+          assigned_at?: string | null
+          assigned_by?: string | null
+          id?: string
+          organization_id?: string
+          support_user_id?: string
+          ticket_id?: string
+          unassigned_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_assignments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_assignments_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "support_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      support_messages: {
+        Row: {
+          body: string
+          created_at: string | null
+          created_by: string | null
+          id: string
+          is_internal_note: boolean
+          organization_id: string
+          sender_id: string | null
+          ticket_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_internal_note?: boolean
+          organization_id: string
+          sender_id?: string | null
+          ticket_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_internal_note?: boolean
+          organization_id?: string
+          sender_id?: string | null
+          ticket_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_messages_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_messages_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "support_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      support_ticket_documents: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          document_id: string
+          id: string
+          organization_id: string
+          ticket_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          document_id: string
+          id?: string
+          organization_id: string
+          ticket_id: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          document_id?: string
+          id?: string
+          organization_id?: string
+          ticket_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_ticket_documents_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_ticket_documents_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_ticket_documents_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "support_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      support_tickets: {
+        Row: {
+          assigned_to: string | null
+          claim_id: string | null
+          closed_at: string | null
+          created_at: string | null
+          created_by: string | null
+          description: string
+          id: string
+          organization_id: string
+          priority: string
+          sim_ticket_id: string
+          status: string
+          subject: string
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          assigned_to?: string | null
+          claim_id?: string | null
+          closed_at?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description: string
+          id?: string
+          organization_id: string
+          priority?: string
+          sim_ticket_id?: string
+          status?: string
+          subject: string
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          assigned_to?: string | null
+          claim_id?: string | null
+          closed_at?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string
+          id?: string
+          organization_id?: string
+          priority?: string
+          sim_ticket_id?: string
+          status?: string
+          subject?: string
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_tickets_claim_id_fkey"
+            columns: ["claim_id"]
+            isOneToOne: false
+            referencedRelation: "claims"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_tickets_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       transaction_events: {
         Row: {
           actor_id: string | null
@@ -2560,12 +2987,24 @@ export type Database = {
           user_id: string
         }[]
       }
+      has_active_support_session: {
+        Args: { target_org_id: string }
+        Returns: boolean
+      }
       has_org_access: {
         Args: { target_org_id: string }
         Returns: boolean
       }
       has_permission: {
         Args: { permission_key: string; target_org_id: string }
+        Returns: boolean
+      }
+      has_platform_permission: {
+        Args: { permission_key: string }
+        Returns: boolean
+      }
+      has_role: {
+        Args: { role_key: string }
         Returns: boolean
       }
       is_platform_admin: {

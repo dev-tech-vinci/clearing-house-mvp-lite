@@ -118,6 +118,38 @@ export async function requireOrgPermission(
   return null;
 }
 
+/**
+ * Platform-wide permission check for /api/v1/support routes (e.g.
+ * entering a support-access session), mirroring requirePlatformAdmin but
+ * built on has_platform_permission() -- any is_platform_role=true role
+ * (support_manager/support_agent, not just platform_super_admin)
+ * carrying the given permission key.
+ */
+export async function requirePlatformPermission(
+  client: SupabaseClient<Database>,
+  permissionKey: string,
+  correlationId: string,
+) {
+  const { data: allowed, error } = await client.rpc('has_platform_permission', {
+    permission_key: permissionKey,
+  });
+
+  if (error) {
+    return apiError(500, 'internal_error', error.message, correlationId);
+  }
+
+  if (!allowed) {
+    return apiError(
+      403,
+      'forbidden',
+      `This action requires the ${permissionKey} permission`,
+      correlationId,
+    );
+  }
+
+  return null;
+}
+
 export function parsePagination(searchParams: URLSearchParams) {
   const limitParam = Number(searchParams.get('limit'));
   const limit = Number.isFinite(limitParam) && limitParam > 0 ? Math.min(limitParam, 200) : 50;

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 
+import { logAuditEvent } from '@kit/audit/server/log-audit-event';
 import { enhanceAction } from '@kit/next/actions';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
@@ -46,6 +47,16 @@ export const submitClaimAction = enhanceAction(
       userId: user.id,
       idempotencyKey: `submit:${data.claimId}`,
     });
+
+    if (result.outcome !== 'duplicate_ignored') {
+      await logAuditEvent(client, {
+        organizationId: claim.organization_id,
+        actorId: user.id,
+        action: 'claim.submitted',
+        targetType: 'claim',
+        targetId: data.claimId,
+      });
+    }
 
     revalidatePath(`/home/claims/${data.claimId}`);
 
