@@ -1,5 +1,6 @@
 'use client';
 
+import type { PayerSelectOption } from '@kit/payers/components';
 import type { Database } from '@kit/supabase/database';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@kit/ui/tabs';
 
@@ -21,11 +22,13 @@ export function PatientsPageContent({
   patients,
   subscribers,
   coverages,
+  payers,
 }: {
   organizationId: string;
   patients: PatientRow[];
   subscribers: SubscriberRow[];
   coverages: CoverageRow[];
+  payers: PayerSelectOption[];
 }) {
   return (
     <Tabs defaultValue={'patients'}>
@@ -51,6 +54,7 @@ export function PatientsPageContent({
         <CoveragesTab
           organizationId={organizationId}
           subscribers={subscribers}
+          payers={payers}
           coverages={coverages}
         />
       </TabsContent>

@@ -4,7 +4,10 @@ const coverageFields = z.object({
   organizationId: z.string().uuid(),
   subscriberId: z.string().uuid(),
   patientId: z.string().uuid(),
-  payerLabel: z.string().min(1).max(255),
+  // Phase 4: real payer picker (public.payers). payer_label is derived
+  // server-side from the selected payer's display_name and kept as the
+  // DB display fallback -- see packages/features/entities/src/server/coverages.actions.ts.
+  payerId: z.string().uuid(),
   groupNumber: z.string().max(64).optional(),
   coverageType: z.enum(['primary', 'secondary', 'tertiary']).default('primary'),
   effectiveDate: z.string().optional(),

@@ -40,6 +40,8 @@
     "@kit/i18n": "workspace:*",
     "@kit/next": "workspace:*",
     "@kit/organizations": "workspace:*",
+    "@kit/payer-rules": "workspace:*",
+    "@kit/payers": "workspace:*",
     "@kit/supabase": "workspace:*",
     "@kit/ui": "workspace:*",
     "@makerkit/data-loader-supabase-core": "^0.0.10",

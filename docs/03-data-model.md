@@ -1,6 +1,6 @@
 # Data Model
 
-> Updated per phase. Phase 2 introduces the identity/tenancy entity group; Phase 3 adds provider/coverage. Later phases add payer, claims, EDI/trace, remittance, support/docs, and governance groups — see `data-model-erd.mmd` for the full target ERD.
+> Updated per phase. Phase 2 introduces the identity/tenancy entity group; Phase 3 adds provider/coverage; Phase 4 adds the global payer/rules group. Later phases add claims, EDI/trace, remittance, support/docs, and governance groups — see `data-model-erd.mmd` for the full target ERD.
 
 ## Identity / tenancy (Phase 2)
 
@@ -54,10 +54,28 @@ RLS alone prevents *reading* another org's row, but not *creating* a row in your
 
 Covered by `apps/web/supabase/tests/database/entities-rls.test.sql`'s cross-org and same-org-mismatch negative tests.
 
-### `payer_id` — deliberately unwired
+### `payer_id` — wired in Phase 4
 
-`coverages.payer_id` and `organization_payer_enrollments.payer_id` are nullable `uuid` columns with **no foreign key constraint** — `public.payers` doesn't exist until Phase 4. Both tables carry a required `payer_label` text field for display until then. Phase 4 must add the FK constraint to both tables once the payer directory exists.
+`coverages.payer_id` and `organization_payer_enrollments.payer_id` are now FK-constrained to `public.payers(id)` (`20260719020018_payers_fk_backfill.sql`), remaining nullable — a coverage/enrollment may still reference a payer outside the ten seeded profiles. `payer_label` remains as the display fallback for that case; it is no longer the sole source of truth. See `docs/06-payer-rules.md`.
+
+## Payer / rules (Phase 4)
+
+Introduced by `apps/web/supabase/migrations/20260719015820_payers.sql`. Unlike every prior group, these tables carry **no `organization_id`** — they are global reference data, readable by any authenticated user, writable only by `platform_super_admin` (via the new `public.is_platform_admin()` helper). Full detail, seed list, and rule-versioning semantics: `docs/06-payer-rules.md`.
+
+| Table | Purpose |
+|---|---|
+| `payers` | The directory. `sim_payer_id` (unique, `SIM-`-prefixed), `category` (10 architecture categories), `scope`, `is_active`, soft-deletable. Exactly ten seeded. |
+| `payer_aliases` | Alternate search names. |
+| `payer_routes` | Simulated connectivity routes (not real). |
+| `payer_supported_transactions` | Simulated supported X12 transaction types per payer. |
+| `payer_rules` | Stable rule identity (`rule_code`, `category`, optional `payer_id`/`claim_type`); `payer_rules_payer_scope` CHECK enforces `payer_id` is required for `payer_edit`/`adjudication` categories only. |
+| `payer_rule_versions` | Immutable versioned rule content, including the `rejection_or_denial` designation. Adding a version never mutates a prior one. |
+| `payer_test_profiles` | Per-payer simulated adjudication default (`paid`/`denied`); scaffolding for Phase 7. |
+
+### `is_platform_admin()`
+
+`public.is_platform_admin() returns boolean` — `SECURITY DEFINER`, `set search_path = ''`, true if the caller holds `platform_super_admin` in any organization membership. Used only to gate writes on the seven tables above; grants no visibility into tenant-owned data and does not reopen the Phase 2 decision against a platform-role cross-org RLS bypass (see `docs/progress/DECISIONS.md`).
 
 ## Future entity groups (not yet built)
 
-Payer (Phase 4) · Claims (Phase 5) · EDI/trace (Phase 6) · Remittance (Phase 7) · Support/docs (Phase 8) · Governance/audit (Phase 8). See `data-model-erd.mmd` for the abridged target ERD across all phases.
+Claims (Phase 5) · EDI/trace (Phase 6) · Remittance (Phase 7) · Support/docs (Phase 8) · Governance/audit (Phase 8). See `data-model-erd.mmd` for the abridged target ERD across all phases.

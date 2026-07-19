@@ -1,16 +1,22 @@
+import { PayersDirectory } from '@kit/payers/components';
+import { createPayersApi } from '@kit/payers/server/api';
+import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { PageBody, PageHeader } from '@kit/ui/page';
 import { Trans } from '@kit/ui/trans';
 
-import { PlaceholderNotice } from '~/components/placeholder-notice';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
-function PayersPage() {
+async function PayersPage() {
+  const client = getSupabaseServerClient();
+  const api = createPayersApi(client);
+  const payers = await api.listPayers();
+
   return (
     <>
       <PageHeader description={<Trans i18nKey={'common:routes.payers'} />} />
 
       <PageBody>
-        <PlaceholderNotice />
+        <PayersDirectory payers={payers} />
       </PageBody>
     </>
   );

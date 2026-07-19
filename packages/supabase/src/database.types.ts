@@ -144,6 +144,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "coverages_payer_id_fkey"
+            columns: ["payer_id"]
+            isOneToOne: false
+            referencedRelation: "payers"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "coverages_subscriber_id_fkey"
             columns: ["subscriber_id"]
             isOneToOne: false
@@ -397,6 +404,13 @@ export type Database = {
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "organization_payer_enrollments_payer_id_fkey"
+            columns: ["payer_id"]
+            isOneToOne: false
+            referencedRelation: "payers"
+            referencedColumns: ["id"]
+          },
         ]
       }
       organizations: {
@@ -502,6 +516,360 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      payer_aliases: {
+        Row: {
+          alias: string
+          created_at: string | null
+          created_by: string | null
+          id: string
+          payer_id: string
+        }
+        Insert: {
+          alias: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          payer_id: string
+        }
+        Update: {
+          alias?: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          payer_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payer_aliases_payer_id_fkey"
+            columns: ["payer_id"]
+            isOneToOne: false
+            referencedRelation: "payers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payer_routes: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          id: string
+          is_active: boolean
+          notes: string | null
+          payer_id: string
+          route_name: string
+          route_type: string
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          payer_id: string
+          route_name: string
+          route_type?: string
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          payer_id?: string
+          route_name?: string
+          route_type?: string
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payer_routes_payer_id_fkey"
+            columns: ["payer_id"]
+            isOneToOne: false
+            referencedRelation: "payers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payer_rule_versions: {
+        Row: {
+          condition: string
+          created_at: string | null
+          created_by: string | null
+          effective_date: string | null
+          expiration_date: string | null
+          explanation: string
+          field_path: string | null
+          id: string
+          is_active: boolean
+          outcome: string
+          payer_rule_id: string
+          rejection_or_denial: string
+          severity: string
+          source: string | null
+          suggested_correction: string | null
+          version_number: number
+        }
+        Insert: {
+          condition: string
+          created_at?: string | null
+          created_by?: string | null
+          effective_date?: string | null
+          expiration_date?: string | null
+          explanation: string
+          field_path?: string | null
+          id?: string
+          is_active?: boolean
+          outcome: string
+          payer_rule_id: string
+          rejection_or_denial: string
+          severity: string
+          source?: string | null
+          suggested_correction?: string | null
+          version_number: number
+        }
+        Update: {
+          condition?: string
+          created_at?: string | null
+          created_by?: string | null
+          effective_date?: string | null
+          expiration_date?: string | null
+          explanation?: string
+          field_path?: string | null
+          id?: string
+          is_active?: boolean
+          outcome?: string
+          payer_rule_id?: string
+          rejection_or_denial?: string
+          severity?: string
+          source?: string | null
+          suggested_correction?: string | null
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payer_rule_versions_payer_rule_id_fkey"
+            columns: ["payer_rule_id"]
+            isOneToOne: false
+            referencedRelation: "payer_rules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payer_rules: {
+        Row: {
+          category: string
+          claim_type: string | null
+          created_at: string | null
+          created_by: string | null
+          deleted_at: string | null
+          id: string
+          is_active: boolean
+          payer_id: string | null
+          rule_code: string
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          category: string
+          claim_type?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          deleted_at?: string | null
+          id?: string
+          is_active?: boolean
+          payer_id?: string | null
+          rule_code: string
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          category?: string
+          claim_type?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          deleted_at?: string | null
+          id?: string
+          is_active?: boolean
+          payer_id?: string | null
+          rule_code?: string
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payer_rules_payer_id_fkey"
+            columns: ["payer_id"]
+            isOneToOne: false
+            referencedRelation: "payers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payer_supported_transactions: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          id: string
+          is_active: boolean
+          payer_id: string
+          transaction_type: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          payer_id: string
+          transaction_type: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          payer_id?: string
+          transaction_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payer_supported_transactions_payer_id_fkey"
+            columns: ["payer_id"]
+            isOneToOne: false
+            referencedRelation: "payers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payer_test_profiles: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          default_outcome: string
+          denial_rule_code: string | null
+          id: string
+          notes: string | null
+          payer_id: string
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          default_outcome?: string
+          denial_rule_code?: string | null
+          id?: string
+          notes?: string | null
+          payer_id: string
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          default_outcome?: string
+          denial_rule_code?: string | null
+          id?: string
+          notes?: string | null
+          payer_id?: string
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payer_test_profiles_payer_id_fkey"
+            columns: ["payer_id"]
+            isOneToOne: true
+            referencedRelation: "payers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payers: {
+        Row: {
+          category: string
+          clearinghouse_payer_id: string | null
+          created_at: string | null
+          created_by: string | null
+          deleted_at: string | null
+          display_name: string
+          effective_date: string | null
+          enrollment_required: boolean
+          id: string
+          is_active: boolean
+          last_verified_date: string | null
+          legal_name: string | null
+          line_of_business: string | null
+          network_name: string | null
+          notes: string | null
+          public_program_id: string | null
+          scope: string
+          sim_payer_id: string
+          source: string | null
+          state: string | null
+          termination_date: string | null
+          test_production: string
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          category: string
+          clearinghouse_payer_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          deleted_at?: string | null
+          display_name: string
+          effective_date?: string | null
+          enrollment_required?: boolean
+          id?: string
+          is_active?: boolean
+          last_verified_date?: string | null
+          legal_name?: string | null
+          line_of_business?: string | null
+          network_name?: string | null
+          notes?: string | null
+          public_program_id?: string | null
+          scope?: string
+          sim_payer_id: string
+          source?: string | null
+          state?: string | null
+          termination_date?: string | null
+          test_production?: string
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          category?: string
+          clearinghouse_payer_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          deleted_at?: string | null
+          display_name?: string
+          effective_date?: string | null
+          enrollment_required?: boolean
+          id?: string
+          is_active?: boolean
+          last_verified_date?: string | null
+          legal_name?: string | null
+          line_of_business?: string | null
+          network_name?: string | null
+          notes?: string | null
+          public_program_id?: string | null
+          scope?: string
+          sim_payer_id?: string
+          source?: string | null
+          state?: string | null
+          termination_date?: string | null
+          test_production?: string
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Relationships: []
       }
       permissions: {
         Row: {
@@ -790,6 +1158,10 @@ export type Database = {
       }
       has_permission: {
         Args: { permission_key: string; target_org_id: string }
+        Returns: boolean
+      }
+      is_platform_admin: {
+        Args: Record<PropertyKey, never>
         Returns: boolean
       }
     }

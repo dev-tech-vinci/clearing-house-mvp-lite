@@ -9,6 +9,8 @@ const INTERNAL_PACKAGES = [
   '@kit/access-control',
   '@kit/entities',
   '@kit/organizations',
+  '@kit/payer-rules',
+  '@kit/payers',
   '@kit/shared',
   '@kit/supabase',
   '@kit/i18n',

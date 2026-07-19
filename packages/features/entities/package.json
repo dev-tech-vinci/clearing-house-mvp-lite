@@ -25,6 +25,7 @@
     "@kit/access-control": "workspace:*",
     "@kit/eslint-config": "workspace:*",
     "@kit/next": "workspace:*",
+    "@kit/payers": "workspace:*",
     "@kit/prettier-config": "workspace:*",
     "@kit/shared": "workspace:*",
     "@kit/supabase": "workspace:*",

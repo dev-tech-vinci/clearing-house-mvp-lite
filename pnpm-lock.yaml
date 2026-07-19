@@ -71,6 +71,12 @@ importers:
       '@kit/organizations':
         specifier: workspace:*
         version: link:../../packages/features/organizations
+      '@kit/payer-rules':
+        specifier: workspace:*
+        version: link:../../packages/features/payer-rules
+      '@kit/payers':
+        specifier: workspace:*
+        version: link:../../packages/features/payers
       '@kit/supabase':
         specifier: workspace:*
         version: link:../../packages/supabase
@@ -370,6 +376,9 @@ importers:
       '@kit/next':
         specifier: workspace:*
         version: link:../../next
+      '@kit/payers':
+        specifier: workspace:*
+        version: link:../payers
       '@kit/prettier-config':
         specifier: workspace:*
         version: link:../../../tooling/prettier
@@ -463,6 +472,153 @@ importers:
       '@tanstack/react-query':
         specifier: 5.90.2
         version: 5.90.2(react@19.2.1)
+      '@types/react':
+        specifier: 19.2.7
+        version: 19.2.7
+      '@types/react-dom':
+        specifier: 19.2.3
+        version: 19.2.3(@types/react@19.2.7)
+      lucide-react:
+        specifier: ^0.545.0
+        version: 0.545.0(react@19.2.1)
+      next:
+        specifier: 15.5.9
+        version: 15.5.9(@playwright/test@1.56.0)(babel-plugin-react-compiler@19.1.0-rc.3)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+      react:
+        specifier: 19.2.1
+        version: 19.2.1
+      react-dom:
+        specifier: 19.2.1
+        version: 19.2.1(react@19.2.1)
+      react-hook-form:
+        specifier: ^7.65.0
+        version: 7.65.0(react@19.2.1)
+      react-i18next:
+        specifier: ^16.0.0
+        version: 16.0.0(i18next@25.6.0(typescript@5.9.3))(react-dom@19.2.1(react@19.2.1))(react@19.2.1)(typescript@5.9.3)
+      sonner:
+        specifier: ^2.0.7
+        version: 2.0.7(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+      zod:
+        specifier: ^3.25.32
+        version: 3.25.76
+
+  packages/features/payer-rules:
+    devDependencies:
+      '@hookform/resolvers':
+        specifier: ^5.2.2
+        version: 5.2.2(react-hook-form@7.65.0(react@19.2.1))
+      '@kit/access-control':
+        specifier: workspace:*
+        version: link:../access-control
+      '@kit/eslint-config':
+        specifier: workspace:*
+        version: link:../../../tooling/eslint
+      '@kit/next':
+        specifier: workspace:*
+        version: link:../../next
+      '@kit/payers':
+        specifier: workspace:*
+        version: link:../payers
+      '@kit/prettier-config':
+        specifier: workspace:*
+        version: link:../../../tooling/prettier
+      '@kit/shared':
+        specifier: workspace:*
+        version: link:../../shared
+      '@kit/supabase':
+        specifier: workspace:*
+        version: link:../../supabase
+      '@kit/tsconfig':
+        specifier: workspace:*
+        version: link:../../../tooling/typescript
+      '@kit/ui':
+        specifier: workspace:*
+        version: link:../../ui
+      '@supabase/supabase-js':
+        specifier: 2.75.0
+        version: 2.75.0
+      '@tanstack/react-query':
+        specifier: 5.90.2
+        version: 5.90.2(react@19.2.1)
+      '@tanstack/react-table':
+        specifier: ^8.21.3
+        version: 8.21.3(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+      '@types/node':
+        specifier: ^24.7.1
+        version: 24.7.1
+      '@types/react':
+        specifier: 19.2.7
+        version: 19.2.7
+      '@types/react-dom':
+        specifier: 19.2.3
+        version: 19.2.3(@types/react@19.2.7)
+      lucide-react:
+        specifier: ^0.545.0
+        version: 0.545.0(react@19.2.1)
+      next:
+        specifier: 15.5.9
+        version: 15.5.9(@playwright/test@1.56.0)(babel-plugin-react-compiler@19.1.0-rc.3)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+      react:
+        specifier: 19.2.1
+        version: 19.2.1
+      react-dom:
+        specifier: 19.2.1
+        version: 19.2.1(react@19.2.1)
+      react-hook-form:
+        specifier: ^7.65.0
+        version: 7.65.0(react@19.2.1)
+      react-i18next:
+        specifier: ^16.0.0
+        version: 16.0.0(i18next@25.6.0(typescript@5.9.3))(react-dom@19.2.1(react@19.2.1))(react@19.2.1)(typescript@5.9.3)
+      sonner:
+        specifier: ^2.0.7
+        version: 2.0.7(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+      zod:
+        specifier: ^3.25.32
+        version: 3.25.76
+
+  packages/features/payers:
+    devDependencies:
+      '@hookform/resolvers':
+        specifier: ^5.2.2
+        version: 5.2.2(react-hook-form@7.65.0(react@19.2.1))
+      '@kit/access-control':
+        specifier: workspace:*
+        version: link:../access-control
+      '@kit/eslint-config':
+        specifier: workspace:*
+        version: link:../../../tooling/eslint
+      '@kit/next':
+        specifier: workspace:*
+        version: link:../../next
+      '@kit/prettier-config':
+        specifier: workspace:*
+        version: link:../../../tooling/prettier
+      '@kit/shared':
+        specifier: workspace:*
+        version: link:../../shared
+      '@kit/supabase':
+        specifier: workspace:*
+        version: link:../../supabase
+      '@kit/tsconfig':
+        specifier: workspace:*
+        version: link:../../../tooling/typescript
+      '@kit/ui':
+        specifier: workspace:*
+        version: link:../../ui
+      '@supabase/supabase-js':
+        specifier: 2.75.0
+        version: 2.75.0
+      '@tanstack/react-query':
+        specifier: 5.90.2
+        version: 5.90.2(react@19.2.1)
+      '@tanstack/react-table':
+        specifier: ^8.21.3
+        version: 8.21.3(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+      '@types/node':
+        specifier: ^24.7.1
+        version: 24.7.1
       '@types/react':
         specifier: 19.2.7
         version: 19.2.7

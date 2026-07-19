@@ -1,6 +1,7 @@
 import { PatientsPageContent } from '@kit/entities/components';
 import { createEntitiesApi } from '@kit/entities/server/api';
 import { resolveCurrentOrganizationId } from '@kit/organizations/components';
+import { createPayersApi } from '@kit/payers/server/api';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { PageBody, PageHeader } from '@kit/ui/page';
 import { Trans } from '@kit/ui/trans';
@@ -33,11 +34,13 @@ async function PatientsPageContentLoader({
 }) {
   const client = getSupabaseServerClient();
   const api = createEntitiesApi(client);
+  const payersApi = createPayersApi(client);
 
-  const [patients, subscribers, coverages] = await Promise.all([
+  const [patients, subscribers, coverages, payers] = await Promise.all([
     api.listPatients(organizationId),
     api.listSubscribers(organizationId),
     api.listCoverages(organizationId),
+    payersApi.listActivePayers(),
   ]);
 
   return (
@@ -46,6 +49,7 @@ async function PatientsPageContentLoader({
       patients={patients}
       subscribers={subscribers}
       coverages={coverages}
+      payers={payers}
     />
   );
 }

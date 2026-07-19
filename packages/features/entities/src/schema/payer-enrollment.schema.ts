@@ -2,7 +2,10 @@ import { z } from 'zod';
 
 const enrollmentFields = z.object({
   organizationId: z.string().uuid(),
-  payerLabel: z.string().min(1).max(255),
+  // Phase 4: real payer picker (public.payers). payer_label is derived
+  // server-side from the selected payer's display_name -- see
+  // packages/features/entities/src/server/enrollments.actions.ts.
+  payerId: z.string().uuid(),
   status: z.enum(['pending', 'active', 'inactive']).default('pending'),
   effectiveDate: z.string().optional(),
   terminationDate: z.string().optional(),

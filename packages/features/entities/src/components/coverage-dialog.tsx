@@ -10,6 +10,7 @@ import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import type { z } from 'zod';
 
+import { PayerSelect, type PayerSelectOption } from '@kit/payers/components';
 import type { Database } from '@kit/supabase/database';
 import { Button } from '@kit/ui/button';
 import {
@@ -48,7 +49,7 @@ type SubscriberRow = Database['public']['Tables']['subscribers']['Row'] & {
 const defaultValues = {
   subscriberId: '',
   patientId: '',
-  payerLabel: '',
+  payerId: '',
   groupNumber: '',
   coverageType: 'primary' as const,
   effectiveDate: '',
@@ -58,12 +59,14 @@ const defaultValues = {
 export function CoverageDialog({
   organizationId,
   subscribers,
+  payers,
   coverage,
   open,
   onOpenChange,
 }: {
   organizationId: string;
   subscribers: SubscriberRow[];
+  payers: PayerSelectOption[];
   coverage?: CoverageRow;
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -83,7 +86,7 @@ export function CoverageDialog({
         coverageId: coverage.id,
         subscriberId: coverage.subscriber_id,
         patientId: coverage.patient_id,
-        payerLabel: coverage.payer_label,
+        payerId: coverage.payer_id ?? '',
         groupNumber: coverage.group_number ?? '',
         coverageType: coverage.coverage_type as 'primary' | 'secondary' | 'tertiary',
         effectiveDate: coverage.effective_date ?? '',
@@ -126,8 +129,7 @@ export function CoverageDialog({
           <DialogTitle>{isEdit ? 'Edit coverage' : 'Add coverage'}</DialogTitle>
           <DialogDescription>
             Simulation only -- member ID is auto-generated and obviously
-            synthetic. The payer directory is added in a later phase; enter
-            a label for now.
+            synthetic.
           </DialogDescription>
         </DialogHeader>
 
@@ -177,13 +179,11 @@ export function CoverageDialog({
             />
 
             <FormField
-              name={'payerLabel'}
+              name={'payerId'}
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Payer label</FormLabel>
-                  <FormControl>
-                    <Input {...field} placeholder={'SIM-MEDICARE-FFS'} />
-                  </FormControl>
+                  <FormLabel>Payer</FormLabel>
+                  <PayerSelect payers={payers} value={field.value} onValueChange={field.onChange} />
                   <FormMessage />
                 </FormItem>
               )}

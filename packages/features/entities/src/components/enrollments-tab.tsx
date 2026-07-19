@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 
 import type { ColumnDef } from '@tanstack/react-table';
 
+import type { PayerSelectOption } from '@kit/payers/components';
 import type { Database } from '@kit/supabase/database';
 import { Badge } from '@kit/ui/badge';
 import { Button } from '@kit/ui/button';
@@ -16,9 +17,11 @@ type EnrollmentRow =
 
 export function EnrollmentsTab({
   organizationId,
+  payers,
   enrollments,
 }: {
   organizationId: string;
+  payers: PayerSelectOption[];
   enrollments: EnrollmentRow[];
 }) {
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -66,6 +69,7 @@ export function EnrollmentsTab({
       <div className={'flex justify-end'}>
         <Button
           data-test={'add-enrollment-trigger'}
+          disabled={payers.length === 0}
           onClick={() => {
             setEditing(undefined);
             setDialogOpen(true);
@@ -81,6 +85,7 @@ export function EnrollmentsTab({
 
       <EnrollmentDialog
         organizationId={organizationId}
+        payers={payers}
         enrollment={editing}
         open={dialogOpen}
         onOpenChange={setDialogOpen}

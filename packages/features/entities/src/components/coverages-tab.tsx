@@ -8,6 +8,7 @@ import { useMutation } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
 import { toast } from 'sonner';
 
+import type { PayerSelectOption } from '@kit/payers/components';
 import type { Database } from '@kit/supabase/database';
 import { Badge } from '@kit/ui/badge';
 import { Button } from '@kit/ui/button';
@@ -27,10 +28,12 @@ type CoverageRow = Database['public']['Tables']['coverages']['Row'] & {
 export function CoveragesTab({
   organizationId,
   subscribers,
+  payers,
   coverages,
 }: {
   organizationId: string;
   subscribers: SubscriberRow[];
+  payers: PayerSelectOption[];
   coverages: CoverageRow[];
 }) {
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -128,6 +131,7 @@ export function CoveragesTab({
       <CoverageDialog
         organizationId={organizationId}
         subscribers={subscribers}
+        payers={payers}
         coverage={editing}
         open={dialogOpen}
         onOpenChange={setDialogOpen}
