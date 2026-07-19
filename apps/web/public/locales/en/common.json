@@ -65,6 +65,8 @@
     "profile": "Profile",
     "application": "Application",
     "clearinghouse": "Clearinghouse",
+    "providers": "Providers",
+    "patients": "Patients",
     "claims": "Claims",
     "claimBatches": "Claim Batches",
     "remittances": "Remittances",

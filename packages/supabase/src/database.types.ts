@@ -70,6 +70,156 @@ export type Database = {
         }
         Relationships: []
       }
+      coverages: {
+        Row: {
+          coverage_type: string
+          created_at: string | null
+          created_by: string | null
+          deleted_at: string | null
+          effective_date: string | null
+          group_number: string | null
+          id: string
+          is_active: boolean
+          member_id: string
+          organization_id: string
+          patient_id: string
+          payer_id: string | null
+          payer_label: string
+          subscriber_id: string
+          termination_date: string | null
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          coverage_type?: string
+          created_at?: string | null
+          created_by?: string | null
+          deleted_at?: string | null
+          effective_date?: string | null
+          group_number?: string | null
+          id?: string
+          is_active?: boolean
+          member_id?: string
+          organization_id: string
+          patient_id: string
+          payer_id?: string | null
+          payer_label: string
+          subscriber_id: string
+          termination_date?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          coverage_type?: string
+          created_at?: string | null
+          created_by?: string | null
+          deleted_at?: string | null
+          effective_date?: string | null
+          group_number?: string | null
+          id?: string
+          is_active?: boolean
+          member_id?: string
+          organization_id?: string
+          patient_id?: string
+          payer_id?: string | null
+          payer_label?: string
+          subscriber_id?: string
+          termination_date?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coverages_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coverages_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coverages_subscriber_id_fkey"
+            columns: ["subscriber_id"]
+            isOneToOne: false
+            referencedRelation: "subscribers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      facilities: {
+        Row: {
+          address_line1: string | null
+          address_line2: string | null
+          city: string | null
+          created_at: string | null
+          created_by: string | null
+          deleted_at: string | null
+          facility_type: string
+          id: string
+          is_active: boolean
+          name: string
+          npi: string | null
+          organization_id: string
+          postal_code: string | null
+          sim_facility_id: string
+          state: string | null
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          address_line1?: string | null
+          address_line2?: string | null
+          city?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          deleted_at?: string | null
+          facility_type?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          npi?: string | null
+          organization_id: string
+          postal_code?: string | null
+          sim_facility_id?: string
+          state?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          address_line1?: string | null
+          address_line2?: string | null
+          city?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          deleted_at?: string | null
+          facility_type?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          npi?: string | null
+          organization_id?: string
+          postal_code?: string | null
+          sim_facility_id?: string
+          state?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "facilities_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invitations: {
         Row: {
           accepted_at: string | null
@@ -193,6 +343,62 @@ export type Database = {
           },
         ]
       }
+      organization_payer_enrollments: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          deleted_at: string | null
+          effective_date: string | null
+          id: string
+          notes: string | null
+          organization_id: string
+          payer_id: string | null
+          payer_label: string
+          status: string
+          termination_date: string | null
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          deleted_at?: string | null
+          effective_date?: string | null
+          id?: string
+          notes?: string | null
+          organization_id: string
+          payer_id?: string | null
+          payer_label: string
+          status?: string
+          termination_date?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          deleted_at?: string | null
+          effective_date?: string | null
+          id?: string
+          notes?: string | null
+          organization_id?: string
+          payer_id?: string | null
+          payer_label?: string
+          status?: string
+          termination_date?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_payer_enrollments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organizations: {
         Row: {
           created_at: string | null
@@ -226,6 +432,77 @@ export type Database = {
         }
         Relationships: []
       }
+      patients: {
+        Row: {
+          address_line1: string | null
+          address_line2: string | null
+          city: string | null
+          created_at: string | null
+          created_by: string | null
+          date_of_birth: string
+          deleted_at: string | null
+          first_name: string
+          gender: string
+          id: string
+          is_active: boolean
+          last_name: string
+          organization_id: string
+          postal_code: string | null
+          sim_patient_id: string
+          state: string | null
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          address_line1?: string | null
+          address_line2?: string | null
+          city?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          date_of_birth: string
+          deleted_at?: string | null
+          first_name: string
+          gender?: string
+          id?: string
+          is_active?: boolean
+          last_name: string
+          organization_id: string
+          postal_code?: string | null
+          sim_patient_id?: string
+          state?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          address_line1?: string | null
+          address_line2?: string | null
+          city?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          date_of_birth?: string
+          deleted_at?: string | null
+          first_name?: string
+          gender?: string
+          id?: string
+          is_active?: boolean
+          last_name?: string
+          organization_id?: string
+          postal_code?: string | null
+          sim_patient_id?: string
+          state?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patients_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       permissions: {
         Row: {
           created_at: string | null
@@ -246,6 +523,68 @@ export type Database = {
           key?: string
         }
         Relationships: []
+      }
+      providers: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          deleted_at: string | null
+          first_name: string | null
+          id: string
+          is_active: boolean
+          last_name: string | null
+          npi: string
+          organization_id: string
+          organization_name: string | null
+          provider_type: string
+          sim_provider_id: string
+          taxonomy_code: string | null
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          deleted_at?: string | null
+          first_name?: string | null
+          id?: string
+          is_active?: boolean
+          last_name?: string | null
+          npi: string
+          organization_id: string
+          organization_name?: string | null
+          provider_type: string
+          sim_provider_id?: string
+          taxonomy_code?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          deleted_at?: string | null
+          first_name?: string | null
+          id?: string
+          is_active?: boolean
+          last_name?: string | null
+          npi?: string
+          organization_id?: string
+          organization_name?: string | null
+          provider_type?: string
+          sim_provider_id?: string
+          taxonomy_code?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "providers_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       role_permissions: {
         Row: {
@@ -306,6 +645,72 @@ export type Database = {
           name?: string
         }
         Relationships: []
+      }
+      subscribers: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          date_of_birth: string | null
+          deleted_at: string | null
+          first_name: string
+          id: string
+          is_active: boolean
+          last_name: string
+          organization_id: string
+          patient_id: string
+          relationship_to_patient: string
+          sim_subscriber_id: string
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          date_of_birth?: string | null
+          deleted_at?: string | null
+          first_name: string
+          id?: string
+          is_active?: boolean
+          last_name: string
+          organization_id: string
+          patient_id: string
+          relationship_to_patient?: string
+          sim_subscriber_id?: string
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          date_of_birth?: string | null
+          deleted_at?: string | null
+          first_name?: string
+          id?: string
+          is_active?: boolean
+          last_name?: string
+          organization_id?: string
+          patient_id?: string
+          relationship_to_patient?: string
+          sim_subscriber_id?: string
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscribers_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscribers_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

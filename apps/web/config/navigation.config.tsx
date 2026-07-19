@@ -7,9 +7,11 @@ import {
   LifeBuoy,
   Receipt,
   ShieldCheck,
+  Stethoscope,
   Store,
   User,
   Users,
+  UsersRound,
 } from 'lucide-react';
 import { z } from 'zod';
 
@@ -39,6 +41,16 @@ const routes = [
         path: pathsConfig.app.dashboard,
         Icon: <LayoutDashboard className={iconClasses} />,
         end: true,
+      },
+      {
+        label: 'common:routes.providers',
+        path: pathsConfig.app.providers,
+        Icon: <Stethoscope className={iconClasses} />,
+      },
+      {
+        label: 'common:routes.patients',
+        path: pathsConfig.app.patients,
+        Icon: <UsersRound className={iconClasses} />,
       },
       {
         label: 'common:routes.claims',

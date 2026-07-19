@@ -1,6 +1,6 @@
 # Data Model
 
-> Updated per phase. Phase 2 introduces the identity/tenancy entity group. Later phases add provider/coverage, payer, claims, EDI/trace, remittance, support/docs, and governance groups — see `data-model-erd.mmd` for the full target ERD.
+> Updated per phase. Phase 2 introduces the identity/tenancy entity group; Phase 3 adds provider/coverage. Later phases add payer, claims, EDI/trace, remittance, support/docs, and governance groups — see `data-model-erd.mmd` for the full target ERD.
 
 ## Identity / tenancy (Phase 2)
 
@@ -32,6 +32,32 @@ The MakerKit Lite baseline's `accounts_read` RLS policy is self-only (`auth.uid(
 
 All five are `SECURITY DEFINER` with `set search_path = ''` and fully-qualified references, and each has a narrow `grant execute ... to authenticated` (never `anon`, never `public`). See `docs/04-rbac-and-rls.md` for why each needs to bypass RLS internally and why that's safe.
 
+## Provider / coverage (Phase 3)
+
+Introduced by `apps/web/supabase/migrations/20260719011359_entities.sql`. All six tables are tenant-owned (`organization_id`, `created_at/by`, `updated_at/by`, `deleted_at`), RLS-scoped via `has_org_access(organization_id)` only (no finer permission key — see `docs/progress/DECISIONS.md`), and carry a cosmetic, obviously-synthetic `sim_*_id` label (e.g. `SIM-PROV-A1B2C3D4`) distinct from the real `id` primary key.
+
+| Table | Purpose |
+|---|---|
+| `providers` | Synthetic rendering/billing providers. `provider_type` (`individual`/`organization`), `npi` (format-checked at the DB layer via a `CHECK`, Luhn-checked at the app layer), name fields gated by type via the `providers_name_by_type` check constraint. NPI unique per org (not globally). |
+| `facilities` | Synthetic places of service. `facility_type`, optional NPI, optional address. |
+| `patients` | Synthetic patients. Name, date of birth, gender, optional address. **No real PHI — names must be obviously fictional.** |
+| `subscribers` | Insurance policy holders, each tied to exactly one `patient_id` via `relationship_to_patient` (`self`/`spouse`/`child`/`other`). |
+| `coverages` | Insurance coverage tied to a `subscriber_id` and the `patient_id` it covers. `member_id` is a cosmetic synthetic label (`SIM-MBR-xxxxxxxx`), never a real insurance ID. `payer_id` is nullable with **no FK yet** — see below. |
+| `organization_payer_enrollments` | Tracks which simulated payers an org is enrolled with. `payer_id` nullable, no FK yet; `payer_label` is the required display value until Phase 4. |
+
+### Cross-org FK-consistency triggers
+
+RLS alone prevents *reading* another org's row, but not *creating* a row in your own org whose foreign key points at someone else's data. Two `BEFORE INSERT/UPDATE` trigger functions close that gap (both `SECURITY DEFINER`, `set search_path = ''`):
+
+- `kit.check_subscriber_patient_org()` — a `subscribers` row's `organization_id` must match its `patient_id`'s own `organization_id`.
+- `kit.check_coverage_org_consistency()` — a `coverages` row's `organization_id` must match both its `subscriber_id`'s and `patient_id`'s organization, **and** its `patient_id` must match the chosen `subscriber_id`'s own `patient_id` (a coverage can't cover a different patient than the subscriber it's attached to).
+
+Covered by `apps/web/supabase/tests/database/entities-rls.test.sql`'s cross-org and same-org-mismatch negative tests.
+
+### `payer_id` — deliberately unwired
+
+`coverages.payer_id` and `organization_payer_enrollments.payer_id` are nullable `uuid` columns with **no foreign key constraint** — `public.payers` doesn't exist until Phase 4. Both tables carry a required `payer_label` text field for display until then. Phase 4 must add the FK constraint to both tables once the payer directory exists.
+
 ## Future entity groups (not yet built)
 
-Provider/coverage (Phase 3) · Payer (Phase 4) · Claims (Phase 5) · EDI/trace (Phase 6) · Remittance (Phase 7) · Support/docs (Phase 8) · Governance/audit (Phase 8). See `data-model-erd.mmd` for the abridged target ERD across all phases.
+Payer (Phase 4) · Claims (Phase 5) · EDI/trace (Phase 6) · Remittance (Phase 7) · Support/docs (Phase 8) · Governance/audit (Phase 8). See `data-model-erd.mmd` for the abridged target ERD across all phases.
