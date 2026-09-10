@@ -14,7 +14,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const correlationId = newCorrelationId();
-  const { client, errorResponse } = await requireApiUser(correlationId);
+  const { client, errorResponse } = await requireApiUser(request, correlationId);
 
   if (errorResponse) {
     return errorResponse;

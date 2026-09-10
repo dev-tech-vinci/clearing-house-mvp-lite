@@ -14,6 +14,7 @@ import {
   resolveDenialAdjustmentCode,
 } from './lib/simulated-adjustment-codes';
 import { generate835Payload, generate837Payload, generateAckPayload } from './lib/synthetic-x12';
+import { resolveClaimTransactionType } from './lib/transaction-type';
 
 export interface ClaimProcessorContext {
   claimId: string;
@@ -357,6 +358,60 @@ export class DeterministicClaimProcessor implements ClaimProcessor {
     const coverage = Array.isArray(claim.coverage) ? claim.coverage[0] : claim.coverage;
     const payerId = coverage?.payer_id ?? null;
     const { payerName, route } = await this.resolvePayerContext(client, payerId);
+
+    // Step 3b: the payer must support this claim's transaction type
+    // (837P/837I), resolved via payer_supported_transactions -- Phase 4
+    // scaffolding that nothing consulted until now. This is a genuine
+    // pre-adjudication REJECTION (same shape as a failed validation rule
+    // above), never a denial -- checked here specifically because it
+    // needs the payer resolved, but still strictly before any EDI is
+    // generated.
+    if (payerId) {
+      const transactionType = resolveClaimTransactionType(claim.claim_type);
+
+      const { data: supportedTransaction } = await client
+        .from('payer_supported_transactions')
+        .select('is_active')
+        .eq('payer_id', payerId)
+        .eq('transaction_type', transactionType)
+        .maybeSingle();
+
+      if (!supportedTransaction || !supportedTransaction.is_active) {
+        await emit({
+          eventName: 'submission_rejected',
+          category: 'validation',
+          status: 'rejected',
+          code: 'unsupported_payer_route',
+          explanation: `Submission rejected pre-adjudication: ${payerName ?? 'this payer'} does not support ${transactionType} submissions.`,
+          actorType: 'system',
+          payerId,
+          route,
+          nextRecommendedAction:
+            'Verify the payer supports this transaction type, or route the claim through a different payer/clearinghouse connection.',
+        });
+
+        await client
+          .from('claims')
+          .update({ status: 'validation_failed', updated_by: context.userId })
+          .eq('id', context.claimId);
+
+        await client
+          .from('processing_jobs')
+          .update({
+            status: 'failed',
+            completed_at: new Date().toISOString(),
+            result: { outcome: 'rejected', failedRules: ['unsupported_payer_route'] },
+          })
+          .eq('id', job.id);
+
+        return {
+          outcome: 'rejected',
+          claimStatus: 'validation_failed',
+          processingJobId: job.id,
+          correlationId,
+        };
+      }
+    }
 
     // Step 4: fetch full display data (names, NPIs, diagnoses, lines) --
     // loadClaimValidationContext only fetches what rule evaluation needs.

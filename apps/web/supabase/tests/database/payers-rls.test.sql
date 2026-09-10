@@ -4,7 +4,7 @@
 -- leaves state behind.
 begin;
 
-select plan(14);
+select plan(17);
 
 -- ---------------------------------------------------------------------
 -- Seed data sanity (from the migration itself, not fixtures)
@@ -20,6 +20,39 @@ select is(
     (select count(*)::int from public.payers where sim_payer_id not like 'SIM-%'),
     0,
     'seed: no payer exists without a SIM- prefix'
+);
+
+-- ---------------------------------------------------------------------
+-- Phase 9: payer_supported_transactions -- exactly one payer/transaction
+-- combination is deliberately unsupported (SIM-MCFFS-001's 837I), giving
+-- the Python client's "unsupported payer route" negative test a real
+-- case to submit against, without touching any transaction type the
+-- ten-claim happy-path set actually exercises. The enforcement logic
+-- itself lives in apps/worker (DeterministicClaimProcessor.process()) --
+-- pgTAP can only prove the seed data is what that logic expects to find,
+-- not exercise the TypeScript rejection path itself.
+-- ---------------------------------------------------------------------
+
+select is(
+    (select pst.is_active from public.payer_supported_transactions pst
+        join public.payers p on p.id = pst.payer_id
+        where p.sim_payer_id = 'SIM-MCFFS-001' and pst.transaction_type = '837I'),
+    false,
+    'seed: SIM-MCFFS-001 does not support 837I (the one deliberate unsupported-route fixture)'
+);
+
+select is(
+    (select pst.is_active from public.payer_supported_transactions pst
+        join public.payers p on p.id = pst.payer_id
+        where p.sim_payer_id = 'SIM-MCFFS-001' and pst.transaction_type = '837P'),
+    true,
+    'seed: SIM-MCFFS-001 still supports 837P -- the happy-path fixture type for this payer is untouched'
+);
+
+select is(
+    (select count(*)::int from public.payer_supported_transactions where is_active = false),
+    1,
+    'seed: exactly one payer_supported_transactions row is inactive -- no other payer/transaction combo was accidentally disabled'
 );
 
 -- ---------------------------------------------------------------------

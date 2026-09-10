@@ -17,7 +17,7 @@ import {
  */
 export async function POST(request: NextRequest) {
   const correlationId = newCorrelationId();
-  const { client, user, errorResponse } = await requireApiUser(correlationId);
+  const { client, user, errorResponse } = await requireApiUser(request, correlationId);
 
   if (errorResponse) {
     return errorResponse;

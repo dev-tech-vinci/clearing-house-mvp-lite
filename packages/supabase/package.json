@@ -11,6 +11,7 @@
   "prettier": "@kit/prettier-config",
   "exports": {
     "./server-client": "./src/clients/server-client.ts",
+    "./api-client": "./src/clients/api-client.ts",
     "./server-admin-client": "./src/clients/server-admin-client.ts",
     "./middleware-client": "./src/clients/middleware-client.ts",
     "./browser-client": "./src/clients/browser-client.ts",

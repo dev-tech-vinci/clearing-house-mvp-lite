@@ -24,7 +24,7 @@ import {
  */
 export async function GET(request: NextRequest) {
   const correlationId = newCorrelationId();
-  const { client, errorResponse } = await requireApiUser(correlationId);
+  const { client, errorResponse } = await requireApiUser(request, correlationId);
 
   if (errorResponse) {
     return errorResponse;
@@ -67,7 +67,7 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   const correlationId = newCorrelationId();
-  const { client, errorResponse } = await requireApiUser(correlationId);
+  const { client, errorResponse } = await requireApiUser(request, correlationId);
 
   if (errorResponse) {
     return errorResponse;

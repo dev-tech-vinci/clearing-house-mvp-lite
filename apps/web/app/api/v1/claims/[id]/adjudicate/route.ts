@@ -2,8 +2,6 @@ import { NextRequest } from 'next/server';
 
 import { z } from 'zod';
 
-import { logAuditEvent } from '@kit/audit/server/log-audit-event';
-
 import { DeterministicClaimProcessor } from 'worker/claim-processor';
 
 import {
@@ -15,11 +13,14 @@ import {
 } from '../../../_lib/api-response';
 
 /**
- * POST /api/v1/claims/{id}/submit -- submits an approved claim. Honors a
- * client-supplied `Idempotency-Key` header per CLAUDE.md's API contract,
- * falling back to a deterministic `submit:{claimId}` key. Either way, the
- * real idempotency guarantee is `processing_jobs.claim_id` being UNIQUE,
- * not the header value itself -- see docs/progress/DECISIONS.md.
+ * POST /api/v1/claims/{id}/adjudicate -- the missing REST counterpart to
+ * @kit/remittances' adjudicateClaimAction (Phase 7 only built the Server
+ * Action; nothing in this repo could adjudicate a claim over HTTP until
+ * this route, which the Phase 9 Python client needs to reach paid/denied
+ * at all). Deterministic, rule-driven outcome -- see
+ * DeterministicClaimProcessor.adjudicate. Idempotent via
+ * remittances.claim_id UNIQUE: a second call returns outcome:
+ * 'duplicate_ignored', not an error.
  */
 export async function POST(
   request: NextRequest,
@@ -63,44 +64,30 @@ export async function POST(
     return permissionError;
   }
 
-  if (claim.status !== 'approved') {
+  if (claim.status !== 'accepted_for_adjudication') {
     return apiError(
       409,
       'conflict',
-      'Only an approved claim can be submitted -- validate and approve it first',
+      'Only a claim accepted for adjudication can be adjudicated -- submit it first',
       correlationId,
     );
   }
 
-  const idempotencyKey = request.headers.get('Idempotency-Key') || `submit:${id}`;
-
   try {
     const processor = new DeterministicClaimProcessor();
 
-    const result = await processor.process(client, {
+    const result = await processor.adjudicate(client, {
       claimId: id,
       organizationId: claim.organization_id,
       userId: user!.id,
-      idempotencyKey,
     });
-
-    if (result.outcome !== 'duplicate_ignored') {
-      await logAuditEvent(client, {
-        organizationId: claim.organization_id,
-        actorId: user!.id,
-        action: 'claim.submitted',
-        targetType: 'claim',
-        targetId: id,
-        correlationId,
-      });
-    }
 
     return apiOk(result, correlationId, result.outcome === 'processed' ? 201 : 200);
   } catch (error) {
     return apiError(
       500,
       'internal_error',
-      error instanceof Error ? error.message : 'Could not submit claim',
+      error instanceof Error ? error.message : 'Could not adjudicate claim',
       correlationId,
     );
   }

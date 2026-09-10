@@ -1,9 +1,10 @@
 import 'server-only';
 
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import { getSupabaseApiClient } from '@kit/supabase/api-client';
 import { requireUser } from '@kit/supabase/require-user';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
@@ -12,10 +13,10 @@ import type { Database } from '~/lib/database.types';
 /**
  * Structured error envelope for every /api/v1/* response, per the
  * cross-cutting contract in CLAUDE.md: { error: { code, message,
- * correlationId, details? } }. Idempotency keys and an audit_events row
- * are NOT implemented here -- neither exists yet for this surface
- * (idempotency infra is scoped to Phase 6's claim-submission path;
- * audit_events is a Phase 8 table). See docs/progress/DECISIONS.md.
+ * correlationId, details? } }. audit_events coverage on this surface is
+ * still partial (see docs/progress/DECISIONS.md) -- idempotency
+ * (processing_jobs.claim_id, remittances.claim_id, payment_matches.eft_trace_id
+ * unique constraints) is real and DB-enforced.
  */
 export function newCorrelationId() {
   return crypto.randomUUID();
@@ -42,10 +43,44 @@ export function apiOk<T>(data: T, correlationId: string, status = 200) {
 }
 
 /**
- * JWT auth for /api/v1/* routes. Returns the authenticated user's client
- * and JWT, or an error Response ready to return directly.
+ * Auth for /api/v1/* routes. Two paths, both real user auth -- neither
+ * ever touches the service-role key:
+ *
+ * 1. Bearer token (Authorization: Bearer <access_token>) -- for non-browser
+ *    clients that can't carry a Next.js SSR cookie session (e.g. the
+ *    Phase 9 Python test client). The token is verified against Supabase
+ *    Auth itself (auth.getUser(token), a real network round-trip, not a
+ *    local decode) and the returned client is bound to that same token
+ *    via a per-request header, so every subsequent .from()/.rpc() call is
+ *    RLS-scoped to that user exactly as a cookie session would be. An
+ *    invalid or expired token is a 401, not a fallback to any other auth.
+ * 2. Cookie/SSR session (the pre-existing path) -- for the browser and
+ *    Playwright, unchanged. Next.js's CSRF protection (apps/web/middleware.ts)
+ *    already covers this path; it does not apply to the stateless Bearer
+ *    path, which carries no cookie for CSRF to protect in the first place.
+ *
+ * Returns the authenticated user's client and identity, or an error
+ * Response ready to return directly.
  */
-export async function requireApiUser(correlationId: string) {
+export async function requireApiUser(request: NextRequest, correlationId: string) {
+  const authHeader = request.headers.get('authorization');
+
+  if (authHeader?.toLowerCase().startsWith('bearer ')) {
+    const token = authHeader.slice(authHeader.indexOf(' ') + 1).trim();
+    const client = getSupabaseApiClient<Database>(token);
+    const { data, error } = await client.auth.getUser(token);
+
+    if (error || !data.user) {
+      return {
+        client,
+        user: null,
+        errorResponse: apiError(401, 'unauthorized', 'Invalid or expired bearer token', correlationId),
+      } as const;
+    }
+
+    return { client, user: { id: data.user.id }, errorResponse: null } as const;
+  }
+
   const client = getSupabaseServerClient();
   const auth = await requireUser(client);
 

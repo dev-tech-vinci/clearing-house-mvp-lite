@@ -2,6 +2,8 @@ import { NextRequest } from 'next/server';
 
 import { z } from 'zod';
 
+import { logAuditEvent } from '@kit/audit/server/log-audit-event';
+
 import {
   apiError,
   apiOk,
@@ -24,7 +26,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const correlationId = newCorrelationId();
-  const { client, user, errorResponse } = await requireApiUser(correlationId);
+  const { client, user, errorResponse } = await requireApiUser(request, correlationId);
 
   if (errorResponse) {
     return errorResponse;
@@ -61,6 +63,15 @@ export async function POST(
       correlationId,
     );
   }
+
+  await logAuditEvent(client, {
+    organizationId: claim.organization_id,
+    actorId: user!.id,
+    action: 'claim.approved',
+    targetType: 'claim',
+    targetId: claim.id,
+    correlationId,
+  });
 
   return apiOk(claim, correlationId);
 }

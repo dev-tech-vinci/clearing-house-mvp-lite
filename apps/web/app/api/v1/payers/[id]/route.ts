@@ -20,7 +20,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const correlationId = newCorrelationId();
-  const { client, user, errorResponse } = await requireApiUser(correlationId);
+  const { client, user, errorResponse } = await requireApiUser(request, correlationId);
 
   if (errorResponse) {
     return errorResponse;
