@@ -1,0 +1,37 @@
+%% Local Windows runtime - no cloud deployment in this phase
+flowchart LR
+  subgraph WIN["Local Windows PC (developer machine)"]
+    direction TB
+    VS["VS Code / Terminal<br/>+ Claude Code"]
+    subgraph NODE["Node 20 + pnpm 10 (Turborepo)"]
+      DEV["next dev (apps/web)<br/>http://localhost:3000"]
+      WK["apps/worker processor<br/>(in-process or pnpm task)"]
+    end
+    subgraph DOCKER["Docker Desktop"]
+      subgraph SUPA["supabase start (local stack)"]
+        GT["Auth / GoTrue :54321"]
+        PGDB[("Postgres :54322")]
+        STO["Storage (private buckets)"]
+        STUDIO["Studio :54323"]
+        MAIL["Inbucket mail :54324"]
+      end
+    end
+    subgraph PYENV["Python 3 venv"]
+      PYC["submit_10_test_claims.py<br/>+ pytest (test_end_to_end.py)"]
+    end
+    BR["Browser"]
+  end
+
+  VS --> DEV
+  VS --> WK
+  BR -->|localhost:3000| DEV
+  DEV -->|"supabase-js (RLS)"| PGDB
+  DEV --> GT
+  DEV --> STO
+  WK --> PGDB
+  PYC -->|"/api/v1 + --base-url"| DEV
+  DEV -.->|supabase db reset / seed| PGDB
+  MAIL -.->|"confirm emails (E2E)"| DEV
+
+  classDef db fill:#eef7ee,stroke:#3c9a5f,color:#1f4d30;
+  class PGDB db;

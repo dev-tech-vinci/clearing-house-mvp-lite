@@ -1,0 +1,45 @@
+%% Claim state machine. REJECTION states are pre-adjudication; DENIAL is post-adjudication.
+stateDiagram-v2
+    [*] --> Draft
+    Draft --> Validating: submit for validation
+    Validating --> ValidationFailed: local schema/rule error
+    ValidationFailed --> Draft: correct
+    Validating --> Validated: all edits pass
+    Validated --> EDIGenerated: approve + generate X12
+    EDIGenerated --> Submitted: enqueue processing job
+
+    Submitted --> TA1Rejected: envelope invalid (REJECTION)
+    Submitted --> TA1Accepted
+    TA1Accepted --> Ack999Rejected: syntax/IG error (REJECTION)
+    TA1Accepted --> Ack999Accepted
+    Ack999Accepted --> Ack277CARejected: claim data error (REJECTION)
+    Ack999Accepted --> Ack277CAAccepted
+
+    Ack277CAAccepted --> AcceptedForAdjudication
+    AcceptedForAdjudication --> Adjudicating
+    Adjudicating --> Paid: covered (8 of 10)
+    Adjudicating --> PartiallyPaid: reduced
+    Adjudicating --> Denied: post-adjudication denial (2 of 10)
+
+    Paid --> Remit835Received
+    PartiallyPaid --> Remit835Received
+    Remit835Received --> EFTMatched
+    EFTMatched --> Posted
+    Posted --> Closed
+
+    Denied --> CorrectedResubmitted: appeal / fix
+    Ack277CARejected --> CorrectedResubmitted
+    Ack999Rejected --> CorrectedResubmitted
+    TA1Rejected --> CorrectedResubmitted
+    CorrectedResubmitted --> Draft
+    Closed --> [*]
+
+    note right of TA1Rejected
+      REJECTIONS (pre-adjudication):
+      never counted as denials
+    end note
+    note right of Denied
+      DENIALS (post-adjudication):
+      show rule_id + CARC/RARC + next action
+      no EFT deposit matched
+    end note

@@ -1,0 +1,57 @@
+{
+  "name": "@kit/entities",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "clean": "git clean -xdf .turbo node_modules",
+    "format": "prettier --check \"**/*.{ts,tsx}\"",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
+  },
+  "exports": {
+    "./components": "./src/components/index.ts",
+    "./schema/*": "./src/schema/*.ts",
+    "./server/api": "./src/server/entities.api.ts",
+    "./server/providers-actions": "./src/server/providers.actions.ts",
+    "./server/facilities-actions": "./src/server/facilities.actions.ts",
+    "./server/patients-actions": "./src/server/patients.actions.ts",
+    "./server/subscribers-actions": "./src/server/subscribers.actions.ts",
+    "./server/coverages-actions": "./src/server/coverages.actions.ts",
+    "./server/enrollments-actions": "./src/server/enrollments.actions.ts",
+    "./lib/npi": "./src/lib/npi.ts"
+  },
+  "devDependencies": {
+    "@hookform/resolvers": "^5.2.2",
+    "@kit/access-control": "workspace:*",
+    "@kit/eslint-config": "workspace:*",
+    "@kit/next": "workspace:*",
+    "@kit/payers": "workspace:*",
+    "@kit/prettier-config": "workspace:*",
+    "@kit/shared": "workspace:*",
+    "@kit/supabase": "workspace:*",
+    "@kit/tsconfig": "workspace:*",
+    "@kit/ui": "workspace:*",
+    "@supabase/supabase-js": "2.75.0",
+    "@tanstack/react-query": "5.90.2",
+    "@tanstack/react-table": "^8.21.3",
+    "@types/node": "^24.7.1",
+    "@types/react": "19.2.7",
+    "@types/react-dom": "19.2.3",
+    "lucide-react": "^0.545.0",
+    "next": "15.5.9",
+    "react": "19.2.1",
+    "react-dom": "19.2.1",
+    "react-hook-form": "^7.65.0",
+    "react-i18next": "^16.0.0",
+    "sonner": "^2.0.7",
+    "zod": "^3.25.32"
+  },
+  "prettier": "@kit/prettier-config",
+  "typesVersions": {
+    "*": {
+      "*": [
+        "src/*"
+      ]
+    }
+  }
+}

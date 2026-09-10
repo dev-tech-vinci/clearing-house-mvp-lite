@@ -1,0 +1,100 @@
+%% Core ERD (abridged to key entities/keys). Every tenant table carries
+%% organization_id, created_at/by, updated_at/by, soft-delete + RLS.
+erDiagram
+    organizations ||--o{ organization_memberships : has
+    organizations ||--o{ invitations : issues
+    organizations ||--o{ organization_payer_enrollments : enrolls
+    organizations ||--o{ providers : owns
+    organizations ||--o{ patients : owns
+    organizations ||--o{ claims : owns
+    organizations ||--o{ documents : owns
+    organizations ||--o{ support_tickets : raises
+    organizations ||--o{ audit_events : records
+
+    user_profiles ||--o{ organization_memberships : joins
+    roles ||--o{ organization_memberships : grants
+    roles ||--o{ role_permissions : maps
+    permissions ||--o{ role_permissions : maps
+
+    providers ||--o{ claims : renders
+    facilities ||--o{ claims : hosts
+    patients ||--o{ coverages : has
+    subscribers ||--o{ coverages : holds
+    coverages ||--o{ claims : covers
+
+    payers ||--o{ payer_routes : has
+    payers ||--o{ payer_supported_transactions : supports
+    payers ||--o{ payer_rules : governs
+    payers ||--o{ payer_test_profiles : simulates
+    payers ||--o{ claims : billed_to
+    payer_rules ||--o{ payer_rule_versions : versioned
+    payer_rules ||--o{ rule_evaluations : evaluated
+
+    claims ||--|| professional_claim_details : detail_837P
+    claims ||--|| institutional_claim_details : detail_837I
+    claims ||--o{ claim_diagnoses : has
+    claims ||--o{ claim_lines : has
+    claims ||--o{ claim_documents : attaches
+    claims ||--o{ edi_transactions : produces
+    claims ||--o{ transaction_events : traced_by
+    claim_batches ||--o{ claims : groups
+
+    edi_transactions ||--o{ edi_payloads : raw
+    edi_transactions ||--o{ acknowledgments : ackd
+    edi_transactions ||--o{ processing_jobs : processed
+    transaction_events ||--o{ rule_evaluations : cites
+
+    claims ||--o{ remittances : remitted
+    remittances ||--o{ remit_claims : lists
+    remit_claims ||--o{ remit_service_lines : details
+    remit_service_lines ||--o{ claim_adjustments : adjusts
+    remittances ||--o{ eft_traces : paired
+    eft_traces ||--o{ payment_matches : reconciled
+
+    support_tickets ||--o{ support_messages : contains
+    support_tickets ||--o{ support_assignments : assigned
+    support_tickets ||--o{ support_ticket_documents : attaches
+    support_access_sessions }o--|| organizations : scoped_to
+    documents ||--o{ document_access_events : audited
+
+    organizations {
+      uuid id PK
+      text name
+      text slug
+      timestamptz created_at
+    }
+    claims {
+      uuid id PK
+      uuid organization_id FK
+      text claim_type "professional|institutional"
+      uuid payer_id FK
+      text status
+      text correlation_id
+      timestamptz created_at
+    }
+    payers {
+      uuid id PK
+      text display_name
+      text sim_payer_id "SIM-xxxx"
+      text category
+      bool is_active
+    }
+    transaction_events {
+      uuid id PK
+      uuid claim_id FK
+      text event_name
+      text category
+      text interchange_ctrl_no
+      text request_hash
+      text response_hash
+      text rule_id
+      text correlation_id
+    }
+    audit_events {
+      uuid id PK
+      uuid organization_id FK
+      text actor
+      text action
+      jsonb metadata "append-only"
+      timestamptz created_at
+    }

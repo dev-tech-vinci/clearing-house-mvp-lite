@@ -1,0 +1,48 @@
+{
+  "name": "@kit/edi",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "clean": "git clean -xdf .turbo node_modules",
+    "format": "prettier --check \"**/*.{ts,tsx}\"",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
+  },
+  "exports": {
+    "./components": "./src/components/index.ts",
+    "./schema/*": "./src/schema/*.ts",
+    "./server/api": "./src/server/edi.api.ts",
+    "./server/submit-claim-action": "./src/server/submit-claim.actions.ts"
+  },
+  "devDependencies": {
+    "@kit/access-control": "workspace:*",
+    "@kit/audit": "workspace:*",
+    "@kit/claims": "workspace:*",
+    "@kit/eslint-config": "workspace:*",
+    "@kit/next": "workspace:*",
+    "@kit/prettier-config": "workspace:*",
+    "@kit/shared": "workspace:*",
+    "@kit/supabase": "workspace:*",
+    "@kit/tsconfig": "workspace:*",
+    "@kit/ui": "workspace:*",
+    "@supabase/supabase-js": "2.75.0",
+    "@tanstack/react-query": "5.90.2",
+    "@types/node": "^24.7.1",
+    "@types/react": "19.2.7",
+    "@types/react-dom": "19.2.3",
+    "next": "15.5.9",
+    "react": "19.2.1",
+    "react-dom": "19.2.1",
+    "sonner": "^2.0.7",
+    "worker": "workspace:*",
+    "zod": "^3.25.32"
+  },
+  "prettier": "@kit/prettier-config",
+  "typesVersions": {
+    "*": {
+      "*": [
+        "src/*"
+      ]
+    }
+  }
+}

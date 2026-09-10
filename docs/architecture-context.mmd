@@ -1,0 +1,61 @@
+%% C4-style container diagram - Behavioral Health Clearinghouse Simulator MVP
+%% Trust boundaries shown as subgraphs. Service-role credential is server-only.
+flowchart TB
+  subgraph CLIENT["BROWSER (untrusted zone - anon key only)"]
+    B["User Browser<br/>Customer / Support / Admin UIs"]
+    PY["Python EDI Test Client<br/>tools/edi-simulator/submit_10_test_claims.py<br/>(local dev token)"]
+  end
+
+  subgraph APP["NEXT.JS 15 APP - apps/web (server trust boundary)"]
+    direction TB
+    subgraph ROUTES["App Router route groups"]
+      R1["(marketing) + auth<br/>reused from Lite"]
+      R2["home/(customer)<br/>claims, remittances, payers, docs"]
+      R3["support/<br/>ticket queue, trace viewer"]
+      R4["admin/<br/>org, users, payers, simulator"]
+    end
+    subgraph EDGE["Server entry (auth + tenant guard)"]
+      SA["Server Actions<br/>(mutations, forms)"]
+      RH["Route Handlers<br/>/api/v1/* (machine + Python client)"]
+    end
+    subgraph SVC["Domain service layer - packages/features"]
+      S1["Claim svc"]:::svc
+      S2["EDI svc"]:::svc
+      S3["Payer svc"]:::svc
+      S4["Rule engine"]:::svc
+      S5["Trace / Event svc"]:::svc
+      S6["Remittance svc"]:::svc
+      S7["Support svc"]:::svc
+      S8["Document svc"]:::svc
+      S9["Audit svc"]:::svc
+    end
+    ADM["server-admin-client<br/>SUPABASE_SERVICE_ROLE_KEY<br/>import 'server-only'"]:::secret
+  end
+
+  subgraph WORK["LOCAL PROCESSOR - apps/worker (server trust boundary)"]
+    W["Deterministic claim processor<br/>state machine + adjudication sim<br/>invoked in-process (MVP) / pollable job"]
+  end
+
+  subgraph SB["SUPABASE (local Docker) - server trust boundary"]
+    AUTH["Supabase Auth<br/>(GoTrue, MFA-ready)"]
+    PG[("PostgreSQL 15<br/>Row-Level Security on every tenant table")]
+    ST["Supabase Storage<br/>PRIVATE buckets + signed URLs"]
+  end
+
+  B -->|"HTTPS, anon JWT"| ROUTES
+  PY -->|"/api/v1 + bearer"| RH
+  ROUTES --> SA
+  ROUTES --> RH
+  SA --> SVC
+  RH --> SVC
+  SVC --> W
+  W --> S5
+  SVC -->|"RLS as end user (default)"| PG
+  S9 -.->|"append-only writes only"| ADM
+  S8 -->|"signed URL issue"| ST
+  ADM -->|"privileged, audited paths only"| PG
+  SA --> AUTH
+  B -. "never receives service-role key" .- ADM
+
+  classDef svc fill:#e8f0fe,stroke:#4373c4,color:#12325b;
+  classDef secret fill:#fde8e8,stroke:#c0392b,color:#7b1f16,stroke-width:2px;

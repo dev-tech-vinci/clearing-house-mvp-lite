@@ -1,0 +1,36 @@
+{
+  "name": "worker",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Hosts the deterministic ClaimProcessor that advances a submitted claim through the synthetic EDI/ack state machine. No Next.js dependency -- imported synchronously by the web app's submit Server Action for the MVP, but structured so processing can move behind a durable queue later without touching feature packages.",
+  "scripts": {
+    "clean": "git clean -xdf .turbo node_modules",
+    "format": "prettier --check \"**/*.{ts,tsx}\"",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./claim-processor": "./src/claim-processor.ts"
+  },
+  "devDependencies": {
+    "@kit/claims": "workspace:*",
+    "@kit/eslint-config": "workspace:*",
+    "@kit/payer-rules": "workspace:*",
+    "@kit/prettier-config": "workspace:*",
+    "@kit/supabase": "workspace:*",
+    "@kit/tsconfig": "workspace:*",
+    "@supabase/supabase-js": "2.75.0",
+    "@types/node": "^24.7.1",
+    "vitest": "^3.2.4"
+  },
+  "prettier": "@kit/prettier-config",
+  "typesVersions": {
+    "*": {
+      "*": [
+        "src/*"
+      ]
+    }
+  }
+}
